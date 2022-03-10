@@ -1,0 +1,43 @@
+syntax = "proto3";
+package raftservice;
+
+message GetRequest { string key = 1; }
+
+message GetReply {
+  bool ok = 1;
+  string value = 2;
+}
+
+message RaftRequest {
+  string data = 1;
+}
+
+message RaftReply {
+  string data = 1;
+  string error = 2;
+}
+
+message HandshakeRequest {
+  uint64 protocol_version = 1;
+  bytes payload = 2;
+}
+
+message HandshakeResponse {
+  uint64 protocol_version = 1;
+  bytes payload = 2;
+}
+
+service RaftService {
+
+  // rpc Write(RaftRequest) returns (RaftReply) {}
+  // rpc Get(GetRequest) returns (GetReply) {}
+
+  // /// Forward a request to other
+  // rpc Forward(RaftRequest) returns (RaftReply) {}
+
+  // raft RPC
+
+  rpc AppendEntries(RaftRequest) returns (RaftReply);
+  rpc InstallSnapshot(RaftRequest) returns (RaftReply);
+  rpc vote(RaftRequest) returns (RaftReply);
+}

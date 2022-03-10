@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "core/command",
+    "core/tracing",
+    "core/store",
+    "core/db",
+    "core/exception",
+    "core/util/misc",
+    "core/util/containers",
+    "core/sled",
+    "server",
+]

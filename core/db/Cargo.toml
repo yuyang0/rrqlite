@@ -1,0 +1,16 @@
+[package]
+name = "core-db"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+r2d2_sqlite = "0.19"
+r2d2 = "0.8"
+rusqlite = { version = "0.26", features = ["backup", "column_decltype"] }
+scopeguard = "1.1.0"
+core-command = { path = "../command" }
+core-tracing = { path = "../tracing" }
+core-util-misc = { path = "../util/misc" }
+core-exception = { path = "../exception" }

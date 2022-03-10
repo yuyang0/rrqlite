@@ -1,0 +1,45 @@
+[package]
+name = "core-store"
+version = "0.1.0"
+edition = "2021"
+readme = "README.md"
+
+[dependencies]
+anyhow = { version = "1" }
+anyerror = { version = "0.1.4" }
+thiserror = { version = "1.0" }
+async-trait = "0.1.36"
+clap = { version = "3.0.13", features = ["derive", "env"] }
+openraft = { git = "https://github.com/datafuselabs/openraft", rev = "6eeb930746baa7782ef961876eba353f4244f3ad" }
+serde = { version = "1.0.114", features = ["derive"] }
+serde_json = "1.0.57"
+tokio = { version = "1.0", default-features = false, features = ["sync"] }
+tracing = "0.1.29"
+tracing-futures = "0.2.4"
+futures = "0.3.21"
+prost = "0.7"
+tonic = "0.4"
+once_cell = "1.9.0"
+byteorder = "1.4.3"
+derive_more = "0.99"
+hostname = "0.3.1"
+
+core-tracing = { path = "../tracing" }
+core-db = { path = "../db" }
+core-exception = { path = "../exception" }
+core-command = { path = "../command" }
+core-sled = { path = "../sled" }
+core-util-containers = { path = "../util/containers" }
+
+[dev-dependencies]
+anyhow = "1.0.32"
+maplit = "1.0.2"
+
+[build-dependencies]
+tonic-build = "0.4"
+
+[features]
+docinclude = [] # Used only for activating `doc(include="...")` on nightly.
+
+[package.metadata.docs.rs]
+features = ["docinclude"] # Activate `docinclude` during docs.rs build.
