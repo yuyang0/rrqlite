@@ -6,8 +6,11 @@ pub mod config;
 pub mod errors;
 mod fsm;
 pub mod network;
+mod raft_node;
 pub mod store;
 mod types;
+
+pub use raft_node::RqliteNode;
 
 use crate::network::AppNetwork;
 use crate::store::SledRaftStore;

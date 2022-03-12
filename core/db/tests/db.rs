@@ -3,7 +3,7 @@ use core_exception::Result;
 use scopeguard::defer;
 use std::fs;
 
-fn prepare_db(db: &mut DB) -> Result<()> {
+fn prepare_db(db: &DB) -> Result<()> {
     let sql = "
 BEGIN;
 CREATE TABLE contacts (
@@ -20,7 +20,7 @@ COMMIT;
     Ok(())
 }
 
-fn check_initial_data(db: &mut DB) -> Result<()> {
+fn check_initial_data(db: &DB) -> Result<()> {
     let ctx = Context::default();
     let res = db.query_str_stmt(&ctx, "SELECT contact_id, name, email FROM contacts")?;
     let res = res.results;
@@ -52,7 +52,7 @@ fn test_db(use_mem: bool) -> Result<()> {
         let _ = fs::remove_file(db_path);
     }
     prepare_db(&mut cur_db)?;
-    check_initial_data(&mut cur_db)?;
+    check_initial_data(&cur_db)?;
     Ok(())
 }
 

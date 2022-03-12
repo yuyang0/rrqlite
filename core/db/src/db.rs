@@ -128,7 +128,7 @@ impl DB {
     }
 
     pub fn load_into_mem(db_path: &str) -> Result<DB> {
-        let mut mem_db = DB::new_mem_db()?;
+        let mem_db = DB::new_mem_db()?;
         mem_db.restore(db_path)?;
         Ok(mem_db)
     }
@@ -147,11 +147,7 @@ impl DB {
         Ok(())
     }
 
-    pub fn execute(
-        &mut self,
-        ctx: &Context,
-        req: &command::Request,
-    ) -> Result<command::ExecuteResult> {
+    pub fn execute(&self, ctx: &Context, req: &command::Request) -> Result<command::ExecuteResult> {
         let mut final_res = command::ExecuteResult::default();
         let mut pooled_conn = self.pool.get().unwrap();
         let mut conn = &*pooled_conn;
@@ -184,17 +180,13 @@ impl DB {
         Ok(final_res)
     }
 
-    pub fn execute_batch(&mut self, sql: &str) -> Result<()> {
+    pub fn execute_batch(&self, sql: &str) -> Result<()> {
         let conn = self.pool.get().unwrap();
         conn.execute_batch(sql)?;
         Ok(())
     }
 
-    pub fn execute_str_stmt(
-        &mut self,
-        ctx: &Context,
-        stmt: &str,
-    ) -> Result<command::ExecuteResult> {
+    pub fn execute_str_stmt(&self, ctx: &Context, stmt: &str) -> Result<command::ExecuteResult> {
         let req = command::Request {
             statements: vec![command::Statement {
                 sql: stmt.to_string(),
@@ -205,7 +197,7 @@ impl DB {
         self.execute(ctx, &req)
     }
 
-    pub fn query(&mut self, ctx: &Context, req: &command::Request) -> Result<command::QueryResult> {
+    pub fn query(&self, ctx: &Context, req: &command::Request) -> Result<command::QueryResult> {
         let mut all_rows = vec![];
         let mut pooled_conn = self.pool.get().unwrap();
         let mut conn = &*pooled_conn;
@@ -291,7 +283,7 @@ impl DB {
         })
     }
 
-    pub fn query_str_stmt(&mut self, ctx: &Context, stmt: &str) -> Result<command::QueryResult> {
+    pub fn query_str_stmt(&self, ctx: &Context, stmt: &str) -> Result<command::QueryResult> {
         let req = command::Request {
             statements: vec![command::Statement {
                 sql: stmt.to_string(),
@@ -310,7 +302,7 @@ impl DB {
         Ok(())
     }
 
-    pub fn restore(&mut self, src_path: &str) -> Result<()> {
+    pub fn restore(&self, src_path: &str) -> Result<()> {
         let f = |p: rusqlite::backup::Progress| {
             tracing::info!("*** pagecount: {}, remaining: {}", p.pagecount, p.remaining);
         };
@@ -335,7 +327,7 @@ impl DB {
         return Ok(content);
     }
 
-    pub fn deserialize(&mut self, data: &[u8]) -> Result<()> {
+    pub fn deserialize(&self, data: &[u8]) -> Result<()> {
         let p = format!("{}.db", thread_rand_string(8));
         fs::write(&p, data)?;
 

@@ -2,12 +2,12 @@ use std::net::{SocketAddr, ToSocketAddrs};
 use std::sync::Arc;
 use std::time::Duration;
 
-use super::RqliteNode;
 use crate::protobuf::raft_service_server::RaftService;
 use crate::protobuf::GetReply;
 use crate::protobuf::GetRequest;
 use crate::protobuf::RaftReply;
 use crate::protobuf::RaftRequest;
+use crate::RqliteNode;
 
 // use bincode::serialize;
 use tokio::sync::mpsc;

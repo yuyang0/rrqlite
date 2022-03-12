@@ -21,8 +21,9 @@ use tokio::sync::RwLock;
 
 use super::log::RaftLog;
 use super::state::RaftState;
+use super::ToStorageError;
 use crate::config::RaftConfig;
-use crate::errors::StoreResult;
+use crate::errors::{StoreError, StoreResult};
 use crate::fsm::{FSMSnapshot, FSM};
 use crate::types::{AppResponse, Endpoint};
 use crate::RqliteTypeConfig;
@@ -65,15 +66,15 @@ pub struct SledRaftStore {
 }
 
 impl SledRaftStore {
-    pub async fn get_node_endpoint(&self, node_id: &NodeId) -> StoreResult<Endpoint> {
-        let endpoint = self
-            .get_node(node_id)
-            .await?
-            .map(|n| n.endpoint)
-            .ok_or_else(|| MetaNetworkError::GetNodeAddrError(format!("node id: {}", node_id)))?;
+    // pub async fn get_node_endpoint(&self, node_id: &NodeId) -> StoreResult<Endpoint> {
+    //     let endpoint = self
+    //         .get_node(node_id)
+    //         .await?
+    //         .map(|n| n.endpoint)
+    //         .ok_or_else(|| StoreError::GetNodeAddrError(format!("node id: {}", node_id)))?;
 
-        Ok(endpoint)
-    }
+    //     Ok(endpoint)
+    // }
 }
 
 #[async_trait]
@@ -81,8 +82,14 @@ impl RaftLogReader<RqliteTypeConfig> for Arc<SledRaftStore> {
     async fn get_log_state(
         &mut self,
     ) -> Result<LogState<RqliteTypeConfig>, StorageError<RqliteTypeConfig>> {
-        let last = self.log.last()?;
-        let last_purged = self.log.get_last_purged()?;
+        let last = self
+            .log
+            .last()
+            .map_to_sto_err(ErrorSubject::Logs, ErrorVerb::Read)?;
+        let last_purged = self
+            .log
+            .get_last_purged()
+            .map_to_sto_err(ErrorSubject::Logs, ErrorVerb::Read)?;
 
         let last = match last {
             None => last_purged,
@@ -99,12 +106,12 @@ impl RaftLogReader<RqliteTypeConfig> for Arc<SledRaftStore> {
         &mut self,
         range: RB,
     ) -> Result<Vec<Entry>, StorageError<RqliteTypeConfig>> {
-        let response = self
+        let entries = self
             .log
-            .range(range.clone())
-            .map(|(_, val)| val.clone())
-            .collect::<Vec<_>>();
-        Ok(response)
+            .range_values(range)
+            .map_to_sto_err(ErrorSubject::Logs, ErrorVerb::Read)?;
+
+        Ok(entries)
     }
 }
 
@@ -114,7 +121,11 @@ impl RaftSnapshotBuilder<RqliteTypeConfig, Cursor<Vec<u8>>> for Arc<SledRaftStor
     async fn build_snapshot(
         &mut self,
     ) -> Result<Snapshot<RqliteTypeConfig, Cursor<Vec<u8>>>, StorageError<RqliteTypeConfig>> {
-        let (data, last_applied_log, snapshot_id) = self.state_machine.snapshot()?;
+        let (data, last_applied_log, snapshot_id) = self
+            .state_machine
+            .snapshot()
+            .await
+            .map_to_sto_err(ErrorSubject::StateMachine, ErrorVerb::Read)?;
 
         let snap_meta = SnapshotMeta {
             last_log_id: last_applied_log,
@@ -153,14 +164,20 @@ impl RaftStorage<RqliteTypeConfig> for Arc<SledRaftStore> {
         &mut self,
         vote: &Vote<RqliteTypeConfig>,
     ) -> Result<(), StorageError<RqliteTypeConfig>> {
-        self.raft_state.write_vote(vote).await?;
+        self.raft_state
+            .write_vote(vote)
+            .await
+            .map_to_sto_err(ErrorSubject::Vote, ErrorVerb::Write)?;
         Ok(())
     }
 
     async fn read_vote(
         &mut self,
     ) -> Result<Option<Vote<RqliteTypeConfig>>, StorageError<RqliteTypeConfig>> {
-        let vt = self.raft_state.read_vote()?;
+        let vt = self
+            .raft_state
+            .read_vote()
+            .map_to_sto_err(ErrorSubject::Vote, ErrorVerb::Read)?;
         Ok(vt)
     }
 
@@ -169,7 +186,11 @@ impl RaftStorage<RqliteTypeConfig> for Arc<SledRaftStore> {
         &mut self,
         entries: &[&Entry],
     ) -> Result<(), StorageError<RqliteTypeConfig>> {
-        self.log.append_values(entries).await?;
+        let entries = entries.iter().map(|x| (*x).clone()).collect::<Vec<_>>();
+        self.log
+            .append(&entries)
+            .await
+            .map_to_sto_err(ErrorSubject::Logs, ErrorVerb::Write)?;
         Ok(())
     }
 
@@ -180,8 +201,10 @@ impl RaftStorage<RqliteTypeConfig> for Arc<SledRaftStore> {
     ) -> Result<(), StorageError<RqliteTypeConfig>> {
         tracing::debug!("delete_log: [{:?}, +oo)", log_id);
 
-        self.log.range_remove(log_id.index..).await?;
-        // .map_to_sto_err(ErrorSubject::Log(log_id), ErrorVerb::Delete)?;
+        self.log
+            .range_remove(log_id.index..)
+            .await
+            .map_to_sto_err(ErrorSubject::Log(log_id), ErrorVerb::Delete)?;
 
         Ok(())
     }
@@ -191,10 +214,14 @@ impl RaftStorage<RqliteTypeConfig> for Arc<SledRaftStore> {
         &mut self,
         log_id: LogId,
     ) -> Result<(), StorageError<RqliteTypeConfig>> {
-        tracing::debug!("delete_log: [{:?}, +oo)", log_id);
-        self.log.set_last_purged(log_id).await?;
-        self.log.range_remove(..=log_id.index).await?;
-        // .map_to_sto_err(ErrorSubject::Log(log_id), ErrorVerb::Delete)?;
+        self.log
+            .set_last_purged(log_id)
+            .await
+            .map_to_sto_err(ErrorSubject::Logs, ErrorVerb::Write)?;
+        self.log
+            .range_remove(..=log_id.index)
+            .await
+            .map_to_sto_err(ErrorSubject::Log(log_id), ErrorVerb::Delete)?;
 
         Ok(())
     }
@@ -244,7 +271,9 @@ impl RaftStorage<RqliteTypeConfig> for Arc<SledRaftStore> {
         meta: &SnapshotMeta<RqliteTypeConfig>,
         snapshot: Box<Self::SnapshotData>,
     ) -> Result<StateMachineChanges<RqliteTypeConfig>, StorageError<RqliteTypeConfig>> {
-        tracing::info!(
+        // TODO(xp): disallow installing a snapshot with smaller last_applied.
+
+        tracing::debug!(
             { snapshot_size = snapshot.get_ref().len() },
             "decoding snapshot for installation"
         );
@@ -253,12 +282,23 @@ impl RaftStorage<RqliteTypeConfig> for Arc<SledRaftStore> {
             meta: meta.clone(),
             data: snapshot.into_inner(),
         };
+
+        tracing::debug!("SNAP META:{:?}", meta);
+
         // Update the state machine.
-        self.state_machine.restore(&new_snapshot.data)?;
+        let res = self.state_machine.restore(&new_snapshot.data).await;
+        match res {
+            Ok(_) => {}
+            Err(e) => {
+                tracing::error!("error: {:?} when install_snapshot", e);
+            }
+        };
 
         // Update current snapshot.
-        let mut current_snapshot = self.current_snapshot.write().await;
-        *current_snapshot = Some(new_snapshot);
+        {
+            let mut current_snapshot = self.current_snapshot.write().await;
+            *current_snapshot = Some(new_snapshot);
+        }
         Ok(StateMachineChanges {
             last_applied: meta.last_log_id,
             is_snapshot: true,

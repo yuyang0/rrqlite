@@ -1,3 +1,4 @@
+use crate::protobuf::RaftRequest;
 use crate::RqliteTypeConfig;
 use core_sled::openraft;
 use serde::{Deserialize, Serialize};
@@ -30,6 +31,8 @@ pub type InstallSnapshotResponse = openraft::raft::InstallSnapshotResponse<Rqlit
 pub type VoteRequest = openraft::raft::VoteRequest<RqliteTypeConfig>;
 pub type VoteResponse = openraft::raft::VoteResponse<RqliteTypeConfig>;
 
+pub type ClientWriteRequest = openraft::raft::ClientWriteRequest<RqliteTypeConfig>;
+
 // pub type RqliteRaft = Raft<RqliteTypeConfig, Network, Arc<SledRaftStore>>;
 
 /// A record holding the hard state of a Raft node.
@@ -42,4 +45,31 @@ pub struct HardState {
     pub current_term: u64,
     /// The ID of the node voted for in the `current_term`.
     pub voted_for: Option<NodeId>,
+}
+
+impl tonic::IntoRequest<RaftRequest> for AppendEntriesRequest {
+    fn into_request(self) -> tonic::Request<RaftRequest> {
+        let mes = RaftRequest {
+            data: serde_json::to_string(&self).expect("fail to serialize"),
+        };
+        tonic::Request::new(mes)
+    }
+}
+
+impl tonic::IntoRequest<RaftRequest> for InstallSnapshotRequest {
+    fn into_request(self) -> tonic::Request<RaftRequest> {
+        let mes = RaftRequest {
+            data: serde_json::to_string(&self).expect("fail to serialize"),
+        };
+        tonic::Request::new(mes)
+    }
+}
+
+impl tonic::IntoRequest<RaftRequest> for VoteRequest {
+    fn into_request(self) -> tonic::Request<RaftRequest> {
+        let mes = RaftRequest {
+            data: serde_json::to_string(&self).expect("fail to serialize"),
+        };
+        tonic::Request::new(mes)
+    }
 }
