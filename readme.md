@@ -1,1 +1,1 @@
-A rust implementation of rqlite
+A rust implementation of [ rqlite ]( https://github.com/rqlite/rqlite ), still in development.
