@@ -4,13 +4,12 @@ use std::time::UNIX_EPOCH;
 
 use async_trait::async_trait;
 use core_sled::openraft;
-use openraft::{MessageSummary, SnapshotMeta};
+use openraft::MessageSummary;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::{StoreError, StoreResult};
-use crate::types::openraft::{EffectiveMembership, Entry, EntryPayload, LogId};
+use crate::types::openraft::{EffectiveMembership, Entry, EntryPayload, LogId, SnapshotMeta};
 use crate::types::{AppRequest, AppResponse};
-use crate::RqliteTypeConfig;
 use core_command::command;
 use core_db::{Context, DB};
 use core_tracing::tracing;
@@ -24,6 +23,7 @@ pub trait FSM: Send + Sync {
     async fn apply(&self, entry: &Entry) -> StoreResult<AppResponse>;
     async fn snapshot(&self) -> StoreResult<(Vec<u8>, LogId, String)>;
     async fn restore(&self, snapshot: &[u8]) -> StoreResult<()>;
+    async fn query(&self, qr: &command::QueryRequest) -> StoreResult<command::QueryResult>;
     fn get_membership(&self) -> StoreResult<Option<EffectiveMembership>>;
     fn get_last_applied(&self) -> StoreResult<Option<LogId>>;
 }
@@ -31,7 +31,7 @@ pub trait FSM: Send + Sync {
 /// The application snapshot type which the `MetaStore` works with.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FSMSnapshot {
-    pub meta: SnapshotMeta<RqliteTypeConfig>,
+    pub meta: SnapshotMeta,
 
     /// The data of the state machine at the time of this snapshot.
     pub data: Vec<u8>,
@@ -42,8 +42,8 @@ pub struct SQLFsm {
 }
 
 impl SQLFsm {
-    fn new() -> StoreResult<Self> {
-        let mut db = DB::new_mem_db().map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
+    pub fn new() -> StoreResult<Self> {
+        let db = DB::new_mem_db().map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
         let init_sql = "
             BEGIN;
             CREATE TABLE IF NOT EXISTS rqlite_meta(
@@ -118,7 +118,7 @@ impl SQLFsm {
         Ok(())
     }
 
-    fn set_last_applied(&self, log_id: &LogId) -> StoreResult<()> {
+    pub fn set_last_applied(&self, log_id: &LogId) -> StoreResult<()> {
         let ctx = Context::default();
         self.set_last_applied_with_ctx(&ctx, log_id)
     }
@@ -137,7 +137,7 @@ impl SQLFsm {
         Ok(())
     }
 
-    fn set_membership(&self, mem: &EffectiveMembership) -> StoreResult<()> {
+    pub fn set_membership(&self, mem: &EffectiveMembership) -> StoreResult<()> {
         let ctx = Context::default();
         self.set_membership_with_ctx(&ctx, mem)
     }
@@ -159,7 +159,7 @@ impl SQLFsm {
                     .execute(ctx, req)
                     .map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
                 AppResponse::Execute(res)
-            }
+            } // AppRequest::AddNode { node_id, node } => {}
         };
         Ok(msg)
     }
@@ -229,6 +229,19 @@ impl FSM for SQLFsm {
     async fn restore(&self, snapshot: &[u8]) -> StoreResult<()> {
         self.db
             .deserialize(snapshot)
+            .map_err(|e| StoreError::FSMError(AnyError::new(&e)))
+    }
+
+    async fn query(&self, qr: &command::QueryRequest) -> StoreResult<command::QueryResult> {
+        let ctx = Context::default();
+        let req = qr
+            .request
+            .as_ref()
+            .ok_or(StoreError::FSMError(AnyError::error(
+                "request field is empty",
+            )))?;
+        self.db
+            .query(&ctx, &req)
             .map_err(|e| StoreError::FSMError(AnyError::new(&e)))
     }
 

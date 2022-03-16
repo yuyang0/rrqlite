@@ -4,7 +4,7 @@ mod protobuf {
 }
 pub mod config;
 pub mod errors;
-mod fsm;
+pub mod fsm;
 pub mod network;
 mod raft_node;
 pub mod store;

@@ -1,7 +1,7 @@
 use scopeguard::defer;
 
+use crate::error::Result;
 use core_command::command;
-use core_exception::Result;
 use core_tracing::tracing;
 use core_util_misc::random::thread_rand_string;
 use r2d2::PooledConnection;

@@ -1,5 +1,5 @@
 use core_db::db::{Context, DB};
-use core_exception::Result;
+use core_db::error::Result;
 use scopeguard::defer;
 use std::fs;
 

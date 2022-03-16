@@ -1,10 +1,16 @@
 use std::fmt;
 
+use crate::types::openraft::{Node, NodeId};
 use core_command::command;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum AppRequest {
+    // /// Add node if absent
+    // AddNode {
+    //     node_id: NodeId,
+    //     node: Node,
+    // },
     Query(command::QueryRequest),
     Execute(command::ExecuteRequest),
 }
@@ -24,7 +30,7 @@ impl fmt::Display for AppRequest {
             // Cmd::IncrSeq { key } => {
             //     write!(f, "incr_seq:{}", key)
             // }
-            // Cmd::AddNode { node_id, node } => {
+            // AppRequest::AddNode { node_id, node } => {
             //     write!(f, "add_node:{}={}", node_id, node)
             // }
             AppRequest::Execute(req) => {

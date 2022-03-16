@@ -3,6 +3,7 @@ use crate::RqliteTypeConfig;
 use core_sled::openraft;
 use serde::{Deserialize, Serialize};
 
+pub use openraft::Node;
 pub type LogIndex = u64;
 pub type Term = u64;
 pub type NodeId = u64;
@@ -32,7 +33,12 @@ pub type VoteRequest = openraft::raft::VoteRequest<RqliteTypeConfig>;
 pub type VoteResponse = openraft::raft::VoteResponse<RqliteTypeConfig>;
 
 pub type ClientWriteRequest = openraft::raft::ClientWriteRequest<RqliteTypeConfig>;
+pub type ClientWriteResponse = openraft::raft::ClientWriteResponse<RqliteTypeConfig>;
+pub type ClientWriteError = openraft::error::ClientWriteError<RqliteTypeConfig>;
 
+pub type ForwardToLeader = openraft::error::ForwardToLeader<RqliteTypeConfig>;
+pub type Fatal = openraft::error::Fatal<RqliteTypeConfig>;
+pub type ChangeMembershipError = openraft::error::ChangeMembershipError<RqliteTypeConfig>;
 // pub type RqliteRaft = Raft<RqliteTypeConfig, Network, Arc<SledRaftStore>>;
 
 /// A record holding the hard state of a Raft node.

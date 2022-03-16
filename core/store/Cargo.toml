@@ -10,7 +10,6 @@ anyerror = { version = "0.1.4" }
 thiserror = { version = "1.0" }
 async-trait = "0.1.36"
 clap = { version = "3.0.13", features = ["derive", "env"] }
-openraft = { git = "https://github.com/datafuselabs/openraft", rev = "6eeb930746baa7782ef961876eba353f4244f3ad" }
 serde = { version = "1.0.114", features = ["derive"] }
 serde_json = "1.0.57"
 tokio = { version = "1.0", default-features = false, features = ["sync"] }
@@ -34,6 +33,7 @@ core-util-containers = { path = "../util/containers" }
 [dev-dependencies]
 anyhow = "1.0.32"
 maplit = "1.0.2"
+tempfile = "3.3"
 
 [build-dependencies]
 tonic-build = "0.4"

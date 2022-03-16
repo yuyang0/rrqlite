@@ -23,10 +23,11 @@ use super::log::RaftLog;
 use super::state::RaftState;
 use super::ToStorageError;
 use crate::config::RaftConfig;
-use crate::errors::{StoreError, StoreResult};
+use crate::errors::StoreResult;
 use crate::fsm::{FSMSnapshot, FSM};
-use crate::types::{AppResponse, Endpoint};
+use crate::types::AppResponse;
 use crate::RqliteTypeConfig;
+use core_sled::get_sled_db;
 
 pub struct SledRaftStore {
     /// The ID of the Raft node for which this storage instances is configured.
@@ -66,6 +67,50 @@ pub struct SledRaftStore {
 }
 
 impl SledRaftStore {
+    /// Open an existent `metasrv` instance or create an new one:
+    /// 1. If `open` is `Some`, try to open an existent one.
+    /// 2. If `create` is `Some`, try to create one.
+    /// Otherwise it panic
+    #[tracing::instrument(level = "debug", skip(config,fsm,open,create), fields(config_id=%config.config_id))]
+    pub async fn open_create(
+        config: &RaftConfig,
+        fsm: Arc<dyn FSM>,
+        open: Option<()>,
+        create: Option<()>,
+    ) -> StoreResult<SledRaftStore> {
+        tracing::info!("open: {:?}, create: {:?}", open, create);
+
+        let db = get_sled_db();
+
+        let raft_state = RaftState::open_create(&db, config, open, create).await?;
+        let is_open = raft_state.is_open();
+        tracing::info!("RaftState opened is_open: {}", is_open);
+
+        let log = RaftLog::open(&db, config).await?;
+        tracing::info!("RaftLog opened");
+
+        // let (sm_id, prev_sm_id) = raft_state.read_state_machine_id()?;
+
+        // // There is a garbage state machine need to be cleaned.
+        // if sm_id != prev_sm_id {
+        //     StateMachine::clean(config, prev_sm_id)?;
+        //     raft_state.write_state_machine_id(&(sm_id, sm_id)).await?;
+        // }
+
+        let current_snapshot = RwLock::new(None);
+
+        Ok(Self {
+            id: raft_state.id,
+            config: config.clone(),
+            is_opened: is_open,
+            _db: db,
+            raft_state,
+            log,
+            state_machine: fsm.clone(),
+            current_snapshot,
+        })
+    }
+
     // pub async fn get_node_endpoint(&self, node_id: &NodeId) -> StoreResult<Endpoint> {
     //     let endpoint = self
     //         .get_node(node_id)

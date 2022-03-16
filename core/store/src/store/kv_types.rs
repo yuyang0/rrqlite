@@ -14,7 +14,6 @@
 
 use std::fmt;
 
-use crate::errors::StoreError;
 use crate::types::openraft::{EffectiveMembership, HardState, LogId, NodeId, Vote};
 use anyerror::AnyError;
 use core_sled::{sled, SledOrderedSerde, SledStorageError};

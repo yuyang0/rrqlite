@@ -12,15 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use common_base::tokio;
-use common_base::GlobalSequence;
-use common_containers::ItemManager;
-use common_containers::Pool;
-use common_tracing::tracing;
+use core_tracing::tracing;
+use core_util_containers::ItemManager;
+use core_util_containers::Pool;
+pub struct GlobalSequence;
 
+impl GlobalSequence {
+    pub fn next() -> usize {
+        static GLOBAL_SEQ: AtomicUsize = AtomicUsize::new(0);
+
+        GLOBAL_SEQ.fetch_add(1, Ordering::SeqCst)
+    }
+}
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_pool() -> anyhow::Result<()> {
     let p = Pool::new(FooMgr {}, Duration::from_millis(10));

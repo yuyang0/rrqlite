@@ -548,14 +548,15 @@ dependencies = [
 name = "core-db"
 version = "0.1.0"
 dependencies = [
+ "anyerror",
  "core-command",
- "core-exception",
  "core-tracing",
  "core-util-misc",
  "r2d2",
  "r2d2_sqlite",
  "rusqlite",
  "scopeguard",
+ "thiserror",
 ]
 
 [[package]]
@@ -615,10 +616,10 @@ dependencies = [
  "hostname",
  "maplit",
  "once_cell",
- "openraft",
  "prost 0.7.0",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror",
  "tokio",
  "tonic 0.4.3",

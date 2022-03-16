@@ -1,4 +1,5 @@
 pub mod db;
+pub mod error;
 pub use crate::db::{Context, DB};
 
 #[cfg(test)]
