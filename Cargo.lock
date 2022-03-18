@@ -555,7 +555,7 @@ dependencies = [
  "r2d2",
  "r2d2_sqlite",
  "rusqlite",
- "scopeguard",
+ "tempfile",
  "thiserror",
 ]
 
@@ -611,6 +611,7 @@ dependencies = [
  "core-sled",
  "core-tracing",
  "core-util-containers",
+ "core-util-misc",
  "derive_more",
  "futures",
  "hostname",
@@ -659,7 +660,14 @@ dependencies = [
 name = "core-util-misc"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "core-exception",
+ "core-tracing",
+ "ctrlc",
+ "futures",
  "rand",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -740,6 +748,16 @@ checksum = "57952ca27b5e3606ff4dd79b0020231aaf9d6aa76dc05fd30137538c50bd3ce8"
 dependencies = [
  "generic-array",
  "typenum",
+]
+
+[[package]]
+name = "ctrlc"
+version = "3.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a19c6cedffdc8c03a3346d723eb20bd85a13362bb96dc2ac000842c6381ec7bf"
+dependencies = [
+ "nix",
+ "winapi",
 ]
 
 [[package]]
@@ -1464,6 +1482,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5ce46fe64a9d73be07dcbe690a38ce1b293be448fd8ce1e6c1b8062c9f72c6a"
 
 [[package]]
+name = "nix"
+version = "0.23.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f866317acbd3a240710c63f065ffb1e4fd466259045ccb504130b7f668f35c6"
+dependencies = [
+ "bitflags",
+ "cc",
+ "cfg-if 1.0.0",
+ "libc",
+ "memoffset",
+]
+
+[[package]]
 name = "nom"
 version = "7.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2078,6 +2109,7 @@ dependencies = [
  "core-exception",
  "core-store",
  "core-tracing",
+ "core-util-misc",
  "openssl",
  "qstring",
  "serde",
@@ -2822,6 +2854,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
 dependencies = [
  "getrandom",
+ "serde",
 ]
 
 [[package]]

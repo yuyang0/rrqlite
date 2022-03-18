@@ -34,6 +34,7 @@ core-util-containers = { path = "../util/containers" }
 anyhow = "1.0.32"
 maplit = "1.0.2"
 tempfile = "3.3"
+core-util-misc = { path = "../util/misc" }
 
 [build-dependencies]
 tonic-build = "0.4"

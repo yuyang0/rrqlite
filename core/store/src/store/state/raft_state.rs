@@ -79,11 +79,10 @@ impl RaftState {
             }
         } else {
             match (open, create) {
-                (Some(_), Some(_)) => (config.id, false),
+                (_, Some(_)) => (config.id, false),
                 (Some(_), None) => {
                     return Err(StoreError::MetaStoreNotFound);
                 }
-                (None, Some(_)) => (config.id, false),
                 (None, None) => panic!("no open no create"),
             }
         };

@@ -45,6 +45,25 @@ impl RaftServiceImpl {
 
 #[tonic::async_trait]
 impl RaftService for RaftServiceImpl {
+    #[tracing::instrument(level = "debug", skip(self))]
+    async fn forward(
+        &self,
+        request: tonic::Request<RaftRequest>,
+    ) -> Result<tonic::Response<RaftReply>, tonic::Status> {
+        core_tracing::extract_remote_span_as_parent(&request);
+
+        let req = request.into_inner();
+
+        let admin_req: ForwardRequest = serde_json::from_str(&req.data)
+            .map_err(|x| tonic::Status::invalid_argument(x.to_string()))?;
+
+        let res = self.rqlite_node.handle_forwardable_request(admin_req).await;
+
+        let raft_mes: RaftReply = res.into();
+
+        Ok(tonic::Response::new(raft_mes))
+    }
+
     #[tracing::instrument(level = "debug", skip(self, request))]
     async fn append_entries(
         &self,

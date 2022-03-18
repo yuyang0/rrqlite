@@ -1,7 +1,4 @@
-mod api;
-mod controller;
-pub use api::create_server;
-pub use controller::Controller;
+pub mod http;
 
 #[cfg(test)]
 mod tests {

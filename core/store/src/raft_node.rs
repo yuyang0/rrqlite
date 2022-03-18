@@ -1,17 +1,16 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use crate::errors::{APIError, RaftError, StoreResult};
 use crate::fsm::FSM;
 use crate::store::SledRaftStore;
-use crate::types::openraft::{ClientWriteError, ClientWriteRequest, EntryPayload, NodeId};
+use crate::types::openraft::{ClientWriteError, ClientWriteRequest, EntryPayload, Node, NodeId};
 use crate::types::{AppRequest, AppResponse};
 use crate::RqliteRaft;
 use core_command::command;
 use core_exception::Result;
 use std::time::Instant;
-use tokio::sync::{watch, Mutex};
+use tokio::sync::{watch, Mutex, RwLock};
 use tokio::task::JoinHandle;
 
 // RqliteNode is the container of meta data related components and threads, such as storage, the raft node and a raft-state monitor.
@@ -74,6 +73,10 @@ impl RqliteNode {
         }
     }
 
+    // Query the database, the meaning of level:
+    // Strong: auto forward the request to leader if current node is follower, and the leader will use RAFT alog to query the database.
+    // Weak: auto forward request to leader if current node is follower and the leader will query the local SQLite directly.
+    // None: just query the local SQLite directly.
     pub async fn query(&self, qr: command::QueryRequest) -> StoreResult<command::QueryResult> {
         let level = command::query_request::Level::from_i32(qr.level)
             .ok_or(APIError::Query(format!("invalid query level {}", qr.level)))?;
@@ -130,6 +133,18 @@ impl RqliteNode {
 
     // join the node with the given ID, reachable at addr, to this node.
     pub async fn join(&self, node_id: NodeId, addr: String, voter: bool) -> StoreResult<()> {
+        if !voter {
+            // TODO: check if this node is already in learner list.
+            let node = Some(Node {
+                addr: addr,
+                ..Default::default()
+            });
+            self.raft
+                .add_learner(node_id, node, true)
+                .await
+                .map_err(|e| APIError::AddLearner(format!("{}", e)))?;
+            return Ok(());
+        }
         let metrics = self.raft.metrics().borrow().clone();
         let membership = metrics.membership_config.get_configs();
 

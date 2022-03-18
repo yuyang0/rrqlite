@@ -21,7 +21,7 @@ pub enum StoreError {
     MetaStoreNotFound,
     #[error("SledStorageError: {0}")]
     SledStorageError(#[from] SledStorageError),
-    #[error(transparent)]
+    #[error("FSMError: {0}")]
     FSMError(#[from] anyerror::AnyError),
     #[error("APIError: {0}")]
     APIError(#[from] APIError),
@@ -82,6 +82,9 @@ pub enum APIError {
 
     #[error("{0}")]
     NotLeader(String),
+
+    #[error("{0}")]
+    AddLearner(String),
 
     #[error(transparent)]
     ForwardToLeader(#[from] ForwardToLeader),

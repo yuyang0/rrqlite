@@ -32,8 +32,8 @@ service RaftService {
   // rpc Write(RaftRequest) returns (RaftReply) {}
   // rpc Get(GetRequest) returns (GetReply) {}
 
-  // /// Forward a request to other
-  // rpc Forward(RaftRequest) returns (RaftReply) {}
+  /// Forward a request to other
+  rpc Forward(RaftRequest) returns (RaftReply) {}
 
   // raft RPC
 

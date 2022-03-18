@@ -1,7 +1,5 @@
 use core_db::db::{Context, DB};
 use core_db::error::Result;
-use scopeguard::defer;
-use std::fs;
 
 fn prepare_db(db: &DB) -> Result<()> {
     let sql = "
@@ -42,14 +40,12 @@ fn check_initial_data(db: &DB) -> Result<()> {
 
 fn test_db(use_mem: bool) -> Result<()> {
     let mut cur_db;
-    let db_path = "/tmp/test.db";
+    let t = tempfile::tempdir().expect("create temp dir to sled db");
+    let db_path = t.path().join("test-tmp.db");
     if use_mem {
         cur_db = DB::new_mem_db()?;
     } else {
         cur_db = DB::new_disk_db(db_path, true)?;
-    }
-    defer! {
-        let _ = fs::remove_file(db_path);
     }
     prepare_db(&mut cur_db)?;
     check_initial_data(&cur_db)?;
@@ -68,11 +64,9 @@ fn test_disk_db() -> Result<()> {
 
 #[test]
 fn test_load_mem_db() -> Result<()> {
-    let db_path = "/tmp/haha.db";
-    defer! {
-        let _ = fs::remove_file(db_path);
-    }
-    let mut disk_db = DB::new_disk_db(db_path, true)?;
+    let t = tempfile::tempdir().expect("create temp dir to sled db");
+    let db_path = t.path().join("test-tmp.db");
+    let mut disk_db = DB::new_disk_db(db_path.clone(), true)?;
     prepare_db(&mut disk_db)?;
     let mut mem_db = DB::load_into_mem(db_path)?;
     check_initial_data(&mut mem_db)?;
@@ -85,10 +79,9 @@ fn test_serialize_deserialize() -> Result<()> {
     prepare_db(&mut mem_db)?;
     let data = mem_db.serialize()?;
     mem_db.close()?;
-    let db_path = "/tmp/kaka.db";
-    defer! {
-        let _ = fs::remove_file(db_path);
-    }
+
+    let t = tempfile::tempdir().expect("create temp dir to sled db");
+    let db_path = t.path().join("test-tmp.db");
     let mut disk_db = DB::new_disk_db(db_path, true)?;
     disk_db.deserialize(&data)?;
 

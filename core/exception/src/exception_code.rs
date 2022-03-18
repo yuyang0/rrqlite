@@ -73,3 +73,11 @@ build_exceptions! {
     NetworkRequestError(1073),
 
 }
+// Service errors [5001,6000].
+build_exceptions! {
+    // A task that already stopped and can not stop twice.
+    AlreadyStarted(5001),
+
+    // A task that already started and can not start twice.
+    AlreadyStopped(5002),
+}

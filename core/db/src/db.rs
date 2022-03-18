@@ -1,5 +1,3 @@
-use scopeguard::defer;
-
 use crate::error::Result;
 use core_command::command;
 use core_tracing::tracing;
@@ -10,6 +8,7 @@ use rusqlite::types::{ToSqlOutput, Value, ValueRef};
 use rusqlite::{OpenFlags, ToSql, Transaction};
 
 use std::fs;
+use std::path::Path;
 
 struct Parameter<'a> {
     p: &'a Option<command::parameter::Value>,
@@ -112,9 +111,13 @@ impl DB {
         Self::new(&cfg)
     }
 
-    pub fn new_disk_db(db_path: &str, enable_shared_cache: bool) -> Result<DB> {
+    pub fn new_disk_db<P: AsRef<Path>>(db_path: P, enable_shared_cache: bool) -> Result<DB> {
+        let db_path = db_path
+            .as_ref()
+            .to_str()
+            .map_or(String::from(""), |v| String::from(v));
         let cfg = Config {
-            path: String::from(db_path),
+            path: db_path,
             enable_shared_cache: enable_shared_cache,
             use_mem: false,
             ..Default::default()
@@ -127,7 +130,7 @@ impl DB {
         Ok(conn)
     }
 
-    pub fn load_into_mem(db_path: &str) -> Result<DB> {
+    pub fn load_into_mem<P: AsRef<Path>>(db_path: P) -> Result<DB> {
         let mem_db = DB::new_mem_db()?;
         mem_db.restore(db_path)?;
         Ok(mem_db)
@@ -296,13 +299,13 @@ impl DB {
 
     // pub fn serialize(&self) -> Result<Vec<u8>> {}
     // write snapshot to specified path.
-    pub fn backup(&self, dst_path: &str) -> Result<()> {
+    pub fn backup<P: AsRef<Path>>(&self, dst_path: P) -> Result<()> {
         let conn = self.pool.get().unwrap();
         conn.backup(rusqlite::DatabaseName::Main, dst_path, None)?;
         Ok(())
     }
 
-    pub fn restore(&self, src_path: &str) -> Result<()> {
+    pub fn restore<P: AsRef<Path>>(&self, src_path: P) -> Result<()> {
         let f = |p: rusqlite::backup::Progress| {
             tracing::info!("*** pagecount: {}, remaining: {}", p.pagecount, p.remaining);
         };
@@ -314,11 +317,8 @@ impl DB {
     pub fn serialize(&self) -> Result<Vec<u8>> {
         let content;
         if self.in_mem {
-            let p = format!("{}.db", thread_rand_string(8));
-            // auto remove the temporary file.
-            defer! {
-                let _ = fs::remove_file(&p);
-            }
+            let t = tempfile::tempdir()?;
+            let p = t.path().join("serialize-tmp.db");
             self.backup(&p)?;
             content = fs::read(&p)?;
         } else {
@@ -328,12 +328,10 @@ impl DB {
     }
 
     pub fn deserialize(&self, data: &[u8]) -> Result<()> {
-        let p = format!("{}.db", thread_rand_string(8));
+        let t = tempfile::tempdir()?;
+        let p = t.path().join("deserialize-tmp.db");
         fs::write(&p, data)?;
 
-        defer! {
-            let _ = fs::remove_file(&p);
-        }
         self.restore(&p)
     }
 }

@@ -8,10 +8,10 @@ edition = "2021"
 [dependencies]
 anyerror = "0.1.4"
 thiserror = "1.0.30"
+tempfile = "3.3"
 r2d2_sqlite = "0.19"
 r2d2 = "0.8"
 rusqlite = { version = "0.26", features = ["backup", "column_decltype"] }
-scopeguard = "1.1.0"
 core-command = { path = "../command" }
 core-tracing = { path = "../tracing" }
 core-util-misc = { path = "../util/misc" }

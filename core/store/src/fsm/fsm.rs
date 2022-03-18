@@ -13,6 +13,7 @@ use crate::types::{AppRequest, AppResponse};
 use core_command::command;
 use core_db::{Context, DB};
 use core_tracing::tracing;
+use std::path::Path;
 use std::sync::Arc;
 
 const LAST_APPLIED_KEY: &'static str = "last-applied-key";
@@ -42,8 +43,12 @@ pub struct SQLFsm {
 }
 
 impl SQLFsm {
-    pub fn new() -> StoreResult<Self> {
-        let db = DB::new_mem_db().map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
+    pub fn new<P: AsRef<Path>>(p: Option<P>) -> StoreResult<Self> {
+        let db = match p {
+            Some(path) => DB::new_disk_db(&path, false)
+                .map_err(|e| StoreError::FSMError(AnyError::new(&e)))?,
+            None => DB::new_mem_db().map_err(|e| StoreError::FSMError(AnyError::new(&e)))?,
+        };
         let init_sql = "
             BEGIN;
             CREATE TABLE IF NOT EXISTS rqlite_meta(
@@ -57,26 +62,26 @@ impl SQLFsm {
         Ok(Self { db: Arc::new(db) })
     }
 
-    fn get_meta_val(&self, ctx: &Context, key: &str) -> StoreResult<String> {
-        let sql = format!("SELECT value from rqlite WHERE key={}", key);
+    fn get_meta_val(&self, ctx: &Context, key: &str) -> StoreResult<Option<String>> {
+        let sql = format!("SELECT value from rqlite_meta WHERE key='{}'", key);
         let res = self
             .db
             .query_str_stmt(ctx, &sql)
             .map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
         if res.results.len() == 0 {
-            return Ok(String::from(""));
+            return Ok(None);
         }
         let res = &res.results[0];
         if res.values.len() == 0 {
-            return Ok(String::from(""));
+            return Ok(None);
         }
         let val = &res.values[0];
         if val.parameters.len() == 0 {
-            return Ok(String::from(""));
+            return Ok(None);
         }
         let p = &val.parameters[0];
         let last_applied_str = match &p.value {
-            None => return Ok(String::from("")),
+            None => return Ok(None),
             Some(v) => match v {
                 // command::parameter::Value::Y(bv) => ToSqlOutput::Borrowed(ValueRef::Blob(bv)),
                 command::parameter::Value::S(sv) => String::from(sv),
@@ -87,16 +92,17 @@ impl SQLFsm {
                 }
             },
         };
-        Ok(last_applied_str)
+        Ok(Some(last_applied_str))
     }
 
     fn set_meta_val(&self, ctx: &Context, key: &str, val: &str) -> StoreResult<()> {
         let sql = format!(
             "
-            insert or replace into rqlite_meta(key, value) values({}, {});
+            insert or replace into rqlite_meta(key, value) values('{}', '{}');
         ",
             key, val
         );
+
         self.db
             .execute_str_stmt(ctx, &sql)
             .map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
@@ -105,10 +111,14 @@ impl SQLFsm {
 
     fn get_last_applied_with_ctx(&self, ctx: &Context) -> StoreResult<Option<LogId>> {
         let last_applied_str = self.get_meta_val(ctx, LAST_APPLIED_KEY)?;
-        let last_applied: LogId = serde_json::from_str(&last_applied_str)
-            .map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
-
-        Ok(Some(last_applied))
+        match last_applied_str {
+            Some(ss) => {
+                let last_applied: LogId = serde_json::from_str(&ss)
+                    .map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
+                Ok(Some(last_applied))
+            }
+            None => Ok(None),
+        }
     }
 
     fn set_last_applied_with_ctx(&self, ctx: &Context, log_id: &LogId) -> StoreResult<()> {
@@ -125,9 +135,14 @@ impl SQLFsm {
 
     fn get_membership_with_ctx(&self, ctx: &Context) -> StoreResult<Option<EffectiveMembership>> {
         let mem_str = self.get_meta_val(ctx, LAST_MEMBERSHIP_KEY)?;
-        let mem: EffectiveMembership =
-            serde_json::from_str(&mem_str).map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
-        Ok(Some(mem))
+        match mem_str {
+            Some(sv) => {
+                let mem: EffectiveMembership = serde_json::from_str(&sv)
+                    .map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
+                Ok(Some(mem))
+            }
+            None => Ok(None),
+        }
     }
 
     fn set_membership_with_ctx(&self, ctx: &Context, mem: &EffectiveMembership) -> StoreResult<()> {
@@ -159,7 +174,7 @@ impl SQLFsm {
                     .execute(ctx, req)
                     .map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
                 AppResponse::Execute(res)
-            } // AppRequest::AddNode { node_id, node } => {}
+            }
         };
         Ok(msg)
     }
@@ -181,6 +196,7 @@ impl FSM for SQLFsm {
             .map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
         let ctx =
             Context::new(&mut conn, true).map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
+
         self.set_last_applied_with_ctx(&ctx, log_id)?;
 
         let res = match entry.payload {

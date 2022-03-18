@@ -1,14 +1,14 @@
-use crate::api::Controller;
 use crate::config::Config;
 use actix_web::{delete, get, post, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use core_command::command;
 use core_exception::Result;
-use core_store::store::Store;
 use core_tracing::tracing;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use qstring::QString;
 use tracing_actix_web::TracingLogger;
 // use serde::{Deserialize, Serialize};
+use super::util::parse_sql_stmts;
+use core_store::RqliteNode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -26,9 +26,9 @@ fn qs_get_i64(qs: &QString, name: &str, dft: i64) -> Result<i64> {
 async fn handle_db_execute(
     _req: HttpRequest,
     req_body: String,
-    ctrl: web::Data<Controller>,
+    node: web::Data<Arc<RqliteNode>>,
 ) -> impl Responder {
-    let stmts_opt = Controller::parse_sql_req(&req_body);
+    let stmts_opt = parse_sql_stmts(&req_body);
 
     // extract query arguments
     let query_str = _req.query_string();
@@ -65,9 +65,9 @@ async fn handle_db_execute(
 async fn handle_db_query(
     _req: HttpRequest,
     req_body: String,
-    ctrl: web::Data<Controller>,
+    node: web::Data<Arc<RqliteNode>>,
 ) -> impl Responder {
-    let stmts_opt = Controller::parse_sql_req(&req_body);
+    let stmts_opt = parse_sql_stmts(&req_body);
     // extract query arguments
     let query_str = _req.query_string();
     let qs = QString::from(query_str);
@@ -115,7 +115,7 @@ async fn handle_db_query(
 }
 
 #[get("/db/backup")]
-async fn handle_db_backup(_req: HttpRequest, ctrl: web::Data<Controller>) -> impl Responder {
+async fn handle_db_backup(_req: HttpRequest, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
     let query_str = _req.query_string(); // "name=ferret"
     let qs = QString::from(query_str);
     let is_txn = qs.get("fmt").is_some();
@@ -128,7 +128,7 @@ async fn handle_db_backup(_req: HttpRequest, ctrl: web::Data<Controller>) -> imp
 async fn handle_db_load(
     _req: HttpRequest,
     req_body: String,
-    ctrl: web::Data<Controller>,
+    node: web::Data<Arc<RqliteNode>>,
 ) -> impl Responder {
     let query_str = _req.query_string(); // "name=ferret"
     let qs = QString::from(query_str);
@@ -155,17 +155,17 @@ struct JoinPayload {
     voter: bool,
 }
 #[post("/join")]
-async fn handle_join(req_body: String, ctrl: web::Data<Controller>) -> impl Responder {
+async fn handle_join(req_body: String, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
     HttpResponse::Ok().body(req_body)
 }
 
 #[post("/notify")]
-async fn handle_notify(req_body: String, ctrl: web::Data<Controller>) -> impl Responder {
+async fn handle_notify(req_body: String, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
     HttpResponse::Ok().body(req_body)
 }
 
 #[delete("/remove")]
-async fn handle_remove(req_body: String, ctrl: web::Data<Controller>) -> impl Responder {
+async fn handle_remove(req_body: String, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
     HttpResponse::Ok().body(req_body)
 }
 
@@ -173,7 +173,7 @@ async fn handle_remove(req_body: String, ctrl: web::Data<Controller>) -> impl Re
 async fn handle_status(
     _req: HttpRequest,
     req_body: String,
-    ctrl: web::Data<Controller>,
+    node: web::Data<Arc<RqliteNode>>,
 ) -> impl Responder {
     HttpResponse::Ok().body(req_body)
 }
@@ -192,7 +192,7 @@ struct NodeInfo {
 // This attempts to contact all the nodes in the cluster, so may take
 // some time to return.
 #[get("/nodes")]
-async fn handle_nodes(req_body: String, ctrl: web::Data<Controller>) -> impl Responder {
+async fn handle_nodes(req_body: String, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
     let res = HashMap::from([("key1", NodeInfo::default())]);
     HttpResponse::Ok().json(res)
 }
@@ -200,35 +200,4 @@ async fn handle_nodes(req_body: String, ctrl: web::Data<Controller>) -> impl Res
 #[get("/healthz")]
 async fn handle_healthz(req_body: String) -> impl Responder {
     HttpResponse::Ok().body("ok")
-}
-
-pub fn create_server(_conf: &Config, s: Store) -> Result<actix_web::dev::Server> {
-    let mut srv = HttpServer::new(|| {
-        App::new()
-            .wrap(TracingLogger::default())
-            .app_data(web::Data::new(Controller::new(s)))
-            .service(handle_db_execute)
-            .service(handle_db_query)
-            .service(handle_db_backup)
-            .service(handle_db_load)
-            .service(handle_join)
-            .service(handle_notify)
-            .service(handle_remove)
-            .service(handle_status)
-            .service(handle_nodes)
-            .service(handle_healthz)
-    });
-    if _conf.http_config.x509_cert.is_empty() {
-        srv = srv.bind(&_conf.http_config.http_addr)?;
-    } else {
-        let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-        builder
-            .set_private_key_file(&_conf.http_config.x509_key, SslFiletype::PEM)
-            .unwrap();
-        builder
-            .set_certificate_chain_file(&_conf.http_config.x509_cert)
-            .unwrap();
-        srv = srv.bind_openssl(&_conf.http_config.http_addr, builder)?;
-    }
-    Ok(srv.run())
 }

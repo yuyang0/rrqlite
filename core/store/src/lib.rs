@@ -8,7 +8,7 @@ pub mod fsm;
 pub mod network;
 mod raft_node;
 pub mod store;
-mod types;
+pub mod types;
 
 pub use raft_node::RqliteNode;
 
