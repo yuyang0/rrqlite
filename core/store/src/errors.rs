@@ -66,6 +66,9 @@ pub enum RaftError {
 
     #[error("{0}")]
     RequestNotForwardToLeaderError(String),
+
+    #[error("{0}")]
+    InitializeError(String),
 }
 
 // represent raft related errors
@@ -108,5 +111,10 @@ pub enum APIError {
     JoinClusterFail(String),
 
     #[error("{0}")]
+    GetNodeAddrError(String),
+
+    #[error("{0}")]
     RequestNotForwardToLeaderError(String),
+    #[error("{0}")]
+    ConnectionError(String),
 }

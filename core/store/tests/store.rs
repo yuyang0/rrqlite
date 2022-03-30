@@ -50,7 +50,6 @@ impl StoreBuilder<RqliteTypeConfig, Arc<SledRaftStore>> for SledStoreBuilder {
                 sled_tree_prefix: format!("test-{}", new_id),
                 ..Default::default()
             };
-            println!("++++++++++++++++++++++++++++++++");
             let sto = SledRaftStore::open_create(&cfg, Arc::new(fsm), None, Some(()))
                 .await
                 .map_err(|e| anyhow::format_err!("{}", e))?;

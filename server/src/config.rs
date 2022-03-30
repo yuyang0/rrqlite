@@ -1,5 +1,6 @@
 use clap::Parser;
 use core_exception::{ErrorCode, Result};
+use core_store::config::StoreConfig;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -115,16 +116,6 @@ pub struct Config {
     #[clap(long = "pprof-enabled", env = "RQLITED_PPROF_ENABLED")]
     pprof_enabled: bool,
 
-    // OnDisk enables on-disk mode.
-    #[clap(long = "on-disk", env = "RQLITED_ON_DISK")]
-    on_disk: bool,
-
-    // // OnDiskPath sets the path to the SQLite file. May not be set.
-    // OnDiskPath string
-
-    // // OnDiskStartup disables the in-memory on-disk startup optimization.
-    // OnDiskStartup bool
-
     // // FKConstraints enables SQLite foreign key constraints.
     // FKConstraints bool
 
@@ -143,7 +134,7 @@ pub struct Config {
     pub http_config: HttpConfig,
 
     #[clap(flatten)]
-    pub raft_config: RaftConfig,
+    pub store: StoreConfig,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Parser, Default)]
@@ -191,108 +182,6 @@ pub struct HttpConfig {
     // X509Key is the path to the private key for the HTTP server. May not be set.
     #[clap(long = "http-key", env = "RQLITED_HTTP_KEY", default_value = "")]
     pub x509_key: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Parser, Default)]
-#[serde(default)]
-pub struct NodeConfig {}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Parser, Default)]
-#[serde(default)]
-pub struct RaftConfig {
-    // RaftAddr is the bind network address for the Raft server.
-    #[clap(
-        long = "raft-addr",
-        env = "RQLITED_RAFT_ADDR",
-        default_value = "localhost:4002"
-    )]
-    addr: String,
-
-    // RaftAdv is the advertised Raft server address.
-    #[clap(
-        long = "raft-adv-addr",
-        env = "RQLITED_RAFT_ADV_ADDR",
-        default_value = ""
-    )]
-    adv: String,
-
-    // JoinSrcIP sets the source IP address during Join request. May not be set.
-    #[clap(
-        long = "join-source-ip",
-        env = "RQLITED_JOIN_SOURCE_IP",
-        default_value = ""
-    )]
-    join_src_ip: String,
-
-    // JoinAddr is the list addresses to use for a join attempt. Each address
-    // will include the proto (HTTP or HTTPS) and will never include the node's
-    // own HTTP server address. May not be set.
-    #[clap(long = "join", env = "RQLITED_JOIN", default_value = "")]
-    join_addr: String,
-
-    // JoinAs sets the user join attempts should be performed as. May not be set.
-    #[clap(long = "join-as", env = "RQLITED_JOIN_AS", default_value = "")]
-    join_as: String,
-
-    // JoinAttempts is the number of times a node should attempt to join using a
-    // given address.
-    #[clap(
-        long = "join-attempts",
-        env = "RQLITED_JOIN_ATTEMPTS",
-        default_value_t = 5
-    )]
-    join_attempts: i32,
-
-    // JoinInterval is the time between retrying failed join operations.
-    #[clap(
-        long = "join-interval",
-        env = "RQLITED_JOIN_INTERVAL",
-        default_value_t = 3
-    )]
-    join_interval: i32,
-
-    // // RaftLogLevel sets the minimum logging level for the Raft subsystem.
-    // #[clap(
-    //     long = "raft-log-level",
-    //     env = "RQLITED_RAFT_LOG_LEVEL",
-    //     default_value = "INFO"
-    // )]
-    // log_level: String,
-
-    // RaftNonVoter controls whether this node is a voting, read-only node.
-    #[clap(long = "raft-no-voter", env = "RQLITED_RAFT_NO_VOTER")]
-    non_voter: bool,
-
-    // RaftSnapThreshold is the number of outstanding log entries that trigger snapshot.
-    #[clap(long = "raft-snap", env = "RQLITED_RAFT_SNAP", default_value_t = 8192)]
-    snap_threshold: u64,
-
-    // RaftSnapInterval sets the threshold check interval.
-    #[clap(
-        long = "raft-snap-int",
-        env = "RQLITED_RAFT_SNAP_INT",
-        default_value_t = 30
-    )]
-    snap_interval: i32,
-    // // RaftLeaderLeaseTimeout sets the leader lease timeout.
-    // RaftLeaderLeaseTimeout time.Duration
-
-    // // RaftHeartbeatTimeout sets the heartbeast timeout.
-    // RaftHeartbeatTimeout time.Duration
-
-    // // RaftElectionTimeout sets the election timeout.
-    // RaftElectionTimeout time.Duration
-
-    // // RaftApplyTimeout sets the Log-apply timeout.
-    // RaftApplyTimeout time.Duration
-
-    // // RaftShutdownOnRemove sets whether Raft should be shutdown if the node is removed
-    // RaftShutdownOnRemove bool
-
-    // // RaftNoFreelistSync disables syncing Raft database freelist to disk. When true,
-    // // it improves the database write performance under normal operation, but requires
-    // // a full database re-sync during recovery.
-    // RaftNoFreelistSync bool
 }
 
 impl Config {

@@ -1,4 +1,5 @@
 use anyerror::AnyError;
+use bytes::BufMut;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
@@ -7,9 +8,10 @@ use core_sled::openraft;
 use openraft::MessageSummary;
 use serde::{Deserialize, Serialize};
 
+use crate::config::FSMConfig;
 use crate::errors::{StoreError, StoreResult};
 use crate::types::openraft::{EffectiveMembership, Entry, EntryPayload, LogId, SnapshotMeta};
-use crate::types::{AppRequest, AppResponse};
+use crate::types::{AppRequest, AppResponse, BackupFormat};
 use core_command::command;
 use core_db::{Context, DB};
 use core_tracing::tracing;
@@ -60,6 +62,14 @@ impl SQLFsm {
         db.execute_batch(init_sql)
             .map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
         Ok(Self { db: Arc::new(db) })
+    }
+
+    pub fn new_with_config(cfg: &FSMConfig) -> StoreResult<Self> {
+        if cfg.on_disk {
+            Self::new(Some(String::from(&cfg.on_disk_path)))
+        } else {
+            Self::new::<String>(None)
+        }
     }
 
     fn get_meta_val(&self, ctx: &Context, key: &str) -> StoreResult<Option<String>> {
@@ -155,6 +165,29 @@ impl SQLFsm {
     pub fn set_membership(&self, mem: &EffectiveMembership) -> StoreResult<()> {
         let ctx = Context::default();
         self.set_membership_with_ctx(&ctx, mem)
+    }
+
+    // backup wites backup of the node state to dst
+    pub fn backup(&self, f: BackupFormat) -> StoreResult<Vec<u8>> {
+        let ctx = Context::default();
+        let data = match f {
+            BackupFormat::Binary => {
+                let data = self
+                    .db
+                    .serialize()
+                    .map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
+                data
+            }
+            BackupFormat::SQL => {
+                let mut buf = vec![].writer();
+
+                self.db
+                    .backup_to_sql(&ctx, &mut buf)
+                    .map_err(|e| StoreError::FSMError(AnyError::new(&e)))?;
+                buf.into_inner()
+            }
+        };
+        Ok(data)
     }
 
     pub fn apply_cmd(&self, ctx: &Context, app_req: &AppRequest) -> StoreResult<AppResponse> {

@@ -5,7 +5,7 @@ use core_util_misc::random::thread_rand_string;
 use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::types::{ToSqlOutput, Value, ValueRef};
-use rusqlite::{OpenFlags, ToSql, Transaction};
+use rusqlite::{DatabaseName, OpenFlags, Row, ToSql, Transaction};
 
 use std::fs;
 use std::path::Path;
@@ -136,6 +136,30 @@ impl DB {
         Ok(mem_db)
     }
 
+    pub fn pragma<F, V>(
+        &self,
+        ctx: &Context,
+        schema_name: Option<DatabaseName<'_>>,
+        pragma_name: &str,
+        pragma_value: V,
+        f: F,
+    ) -> Result<()>
+    where
+        F: FnMut(&Row<'_>) -> rusqlite::Result<()>,
+        V: ToSql,
+    {
+        let pooled_conn = self.pool.get().unwrap();
+        let mut conn = &*pooled_conn;
+
+        if ctx.txn.is_some() {
+            if let Some(ref ref_txn) = ctx.txn {
+                conn = ref_txn;
+            }
+        }
+        conn.pragma(schema_name, pragma_name, pragma_value, f)?;
+        Ok(())
+    }
+
     pub fn close(self) -> Result<()> {
         // let ro_res = self.ro_conn.close();
         // let rw_res = self.rw_conn.close();
@@ -231,7 +255,7 @@ impl DB {
                 rows.columns.push(String::from(col.name()));
                 match col.decl_type() {
                     Some(v) => rows.types.push(String::from(v)),
-                    _ => (),
+                    _ => rows.types.push(String::from("")),
                 }
             }
             // if ! stmt.readonly() {}
@@ -242,27 +266,36 @@ impl DB {
                         Ok(v) => match v {
                             Some(raw_row) => {
                                 let mut vals = command::Values::default();
-                                for (idx, decl_type) in rows.types.iter().enumerate() {
+                                for idx in 0..rows.types.len() {
                                     let mut p = command::Parameter::default();
                                     p.name = String::from(&rows.columns[idx]);
-                                    match decl_type.to_uppercase().as_str() {
-                                        "INTEGER" => {
-                                            let iv: i64 = raw_row.get(idx)?;
-                                            p.value = Some(command::parameter::Value::I(iv));
+                                    let raw_v: Value = raw_row.get(idx)?;
+                                    match raw_v {
+                                        Value::Null => p.value = None,
+                                        Value::Integer(iv) => {
+                                            if rows.types[idx].is_empty() {
+                                                rows.types[idx] = String::from("Integer");
+                                            }
+                                            p.value = Some(command::parameter::Value::I(iv))
                                         }
-                                        "REAL" => {
-                                            let fv: f64 = raw_row.get(idx)?;
-                                            p.value = Some(command::parameter::Value::D(fv))
+                                        Value::Real(rv) => {
+                                            if rows.types[idx].is_empty() {
+                                                rows.types[idx] = String::from("Real");
+                                            }
+                                            p.value = Some(command::parameter::Value::D(rv))
                                         }
-                                        "TEXT" => {
-                                            let sv: String = raw_row.get(idx)?;
-                                            p.value = Some(command::parameter::Value::S(sv));
+                                        Value::Text(tv) => {
+                                            if rows.types[idx].is_empty() {
+                                                rows.types[idx] = String::from("Text");
+                                            }
+                                            p.value = Some(command::parameter::Value::S(tv))
                                         }
-                                        "BLOB" => {
-                                            let bv: Vec<u8> = raw_row.get(idx)?;
-                                            p.value = Some(command::parameter::Value::Y(bv));
+                                        Value::Blob(bv) => {
+                                            if rows.types[idx].is_empty() {
+                                                rows.types[idx] = String::from("Blob");
+                                            }
+                                            p.value = Some(command::parameter::Value::Y(bv))
                                         }
-                                        _ => p.value = None,
                                     }
                                     vals.parameters.push(p);
                                 }
@@ -311,6 +344,84 @@ impl DB {
         };
         let mut conn = self.pool.get().unwrap();
         conn.restore(rusqlite::DatabaseName::Main, src_path, Some(f))?;
+        Ok(())
+    }
+
+    pub fn backup_to_sql<T: std::io::Write>(&self, ctx: &Context, dst: &mut T) -> Result<()> {
+        dst.write(b"PRAGMA foreign_keys=OFF;\nBEGIN TRANSACTION;\n")?;
+
+        // Get the schema.
+        let sql = r#"
+            SELECT "name", "type", "sql" FROM "sqlite_master"
+            WHERE "sql" NOT NULL AND "type" == 'table' ORDER BY "name"
+        "#;
+        let res = self.query_str_stmt(ctx, sql)?;
+        assert_eq!(res.results.len(), 1);
+        for vals in res.results[0].values.iter() {
+            let p = &vals.parameters[0];
+            let tbl_name = match p.value {
+                Some(command::parameter::Value::S(ref sv)) => sv,
+                _ => panic!("need string"),
+            };
+            let sql = match tbl_name.as_str() {
+                "sqlite_sequence" => r#"DELETE FROM "sqlite_sequence";"#,
+                "sqlite_stat1" => r#"ANALYZE "sqlite_master";"#,
+                s if s.starts_with("sqlite_") => continue,
+                _ => match vals.parameters[2].value {
+                    Some(command::parameter::Value::S(ref sv)) => sv,
+                    _ => panic!("need string"),
+                },
+            };
+            dst.write(sql.as_bytes())?;
+            dst.write(b";\n")?;
+
+            let tbl_ident = tbl_name.replace("\"", "\"\"");
+            let mut col_names = vec![];
+            self.pragma(
+                ctx,
+                Some(rusqlite::DatabaseName::Main),
+                "table_info",
+                &tbl_ident,
+                |row| {
+                    let col_name: String = row.get(1)?;
+                    col_names.push(format!(r#"'||quote("{}")||'"#, col_name));
+                    Ok(())
+                },
+            )?;
+
+            let sql = format!(
+                r#"SELECT 'INSERT INTO "{}" VALUES({})' FROM "{}";"#,
+                tbl_ident,
+                col_names.join(","),
+                tbl_ident
+            );
+            let res = self.query_str_stmt(&ctx, &sql)?;
+            for vals in res.results[0].values.iter() {
+                let ss = match vals.parameters[0].value {
+                    Some(command::parameter::Value::S(ref sv)) => sv,
+                    _ => panic!("need string"),
+                };
+                dst.write(ss.as_bytes())?;
+                dst.write(b";\n")?;
+            }
+        }
+
+        // Do indexes, triggers, and views.
+        let sql = r#"SELECT "name", "type", "sql" FROM "sqlite_master"
+    			  WHERE "sql" NOT NULL AND "type" IN ('index', 'trigger', 'view')"#;
+        let res = self.query_str_stmt(&ctx, sql)?;
+        assert_eq!(res.results.len(), 1);
+        for vals in res.results[0].values.iter() {
+            let p = &vals.parameters[2];
+            let sql = match p.value {
+                Some(command::parameter::Value::S(ref sv)) => sv,
+                _ => panic!("need string"),
+            };
+            dst.write(sql.as_bytes())?;
+            dst.write(b";\n")?;
+        }
+
+        dst.write(b"COMMIT;\n")?;
         Ok(())
     }
 

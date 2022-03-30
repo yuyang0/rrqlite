@@ -1,21 +1,10 @@
-// use std::net::{SocketAddr, ToSocketAddrs};
 use std::sync::Arc;
-// use std::time::Duration;
 
 use crate::protobuf::raft_service_server::RaftService;
-// use crate::protobuf::GetReply;
-// use crate::protobuf::GetRequest;
 use crate::protobuf::RaftReply;
 use crate::protobuf::RaftRequest;
+use crate::types::ForwardRequest;
 use crate::RqliteNode;
-
-// use bincode::serialize;
-// use tokio::sync::mpsc;
-// use tokio::sync::oneshot;
-// use tokio::time::timeout;
-// use tonic::transport::Server;
-// use tonic::{Request, Response, Status};
-// use tracing::{error, info, warn};
 
 pub struct RaftServiceImpl {
     pub rqlite_node: Arc<RqliteNode>,
@@ -25,22 +14,6 @@ impl RaftServiceImpl {
     pub fn create(rqlite_node: Arc<RqliteNode>) -> Self {
         Self { rqlite_node }
     }
-    // pub fn new<A: ToSocketAddrs>(snd: mpsc::Sender<Message>, addr: A) -> Self {
-    //     let addr = addr.to_socket_addrs().unwrap().next().unwrap();
-    //     RaftServiceImpl { snd, addr }
-    // }
-
-    // pub async fn run(self) {
-    //     let addr = self.addr;
-    //     info!("listening gRPC requests on: {}", addr);
-    //     let svc = RaftServiceServer::new(self);
-    //     Server::builder()
-    //         .add_service(svc)
-    //         .serve(addr)
-    //         .await
-    //         .expect("error running server");
-    //     warn!("server has quit");
-    // }
 }
 
 #[tonic::async_trait]
@@ -88,6 +61,8 @@ impl RaftService for RaftServiceImpl {
             error: "".to_string(),
         };
 
+        self.rqlite_node.set_last_contact_time().await;
+
         Ok(tonic::Response::new(mes))
     }
 
@@ -115,6 +90,7 @@ impl RaftService for RaftServiceImpl {
             error: "".to_string(),
         };
 
+        self.rqlite_node.set_last_contact_time().await;
         Ok(tonic::Response::new(mes))
     }
 
@@ -142,6 +118,7 @@ impl RaftService for RaftServiceImpl {
             error: "".to_string(),
         };
 
+        self.rqlite_node.set_last_contact_time().await;
         Ok(tonic::Response::new(mes))
     }
 }

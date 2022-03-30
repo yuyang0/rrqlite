@@ -1,6 +1,5 @@
 use core_command::command;
 use core_exception::{ErrorCode, Result};
-use serde_json::Number;
 use serde_json::Value;
 
 pub fn parse_sql_stmts(data: &str) -> Result<Vec<command::Statement>> {

@@ -1,16 +1,17 @@
-use crate::config::Config;
-use actix_web::{delete, get, post, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{delete, get, post, web, HttpRequest, HttpResponse, Responder};
 use core_command::command;
 use core_exception::Result;
 use core_tracing::tracing;
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use qstring::QString;
-use tracing_actix_web::TracingLogger;
 // use serde::{Deserialize, Serialize};
 use super::util::parse_sql_stmts;
+use core_store::errors::{RaftError, StoreError};
+use core_store::types::{BackupFormat, JoinRequest, RemoveNodeRequest};
 use core_store::RqliteNode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::Duration;
 
 fn qs_get_i64(qs: &QString, name: &str, dft: i64) -> Result<i64> {
     match qs.get(name) {
@@ -19,6 +20,20 @@ fn qs_get_i64(qs: &QString, name: &str, dft: i64) -> Result<i64> {
             Ok(iv)
         }
         None => Ok(dft),
+    }
+}
+
+fn store_err_to_resp(e: StoreError) -> HttpResponse {
+    match e {
+        StoreError::RaftError(re) => match re {
+            RaftError::NoLeaderError(_e) => {
+                HttpResponse::ServiceUnavailable().body("no enough nodes for RAFT group")
+            }
+            _ => HttpResponse::InternalServerError()
+                .body("internel error, please contact administrator."),
+        },
+        _ => HttpResponse::InternalServerError()
+            .body("internel error, please contact administrator."),
     }
 }
 
@@ -35,9 +50,9 @@ async fn handle_db_execute(
     let qs = QString::from(query_str);
     let is_txn = qs.get("transaction").is_some();
     let timings = qs.get("timings").is_some();
-    let rediect = qs.get("redirect").is_some();
+    let redirect = qs.get("redirect").is_some();
     let timeout = match qs_get_i64(&qs, "timeout", 50) {
-        Err(e) => return HttpResponse::BadRequest().body("invalid timeout argument"),
+        Err(_e) => return HttpResponse::BadRequest().body("invalid timeout argument"),
         Ok(v) => v,
     };
 
@@ -57,7 +72,22 @@ async fn handle_db_execute(
             er
         }
     };
-    HttpResponse::Ok().json(er)
+    let res = tokio::time::timeout(
+        Duration::from_secs(timeout as u64),
+        node.execute(er, redirect),
+    )
+    .await;
+    let es = match res {
+        Ok(v) => match v {
+            Ok(resp) => resp,
+            Err(e) => return HttpResponse::BadRequest().body(format!("Failed to execute: {}", e)),
+        },
+        Err(_e) => {
+            return HttpResponse::RequestTimeout()
+                .json(HashMap::from([("error", "execute timeout")]))
+        }
+    };
+    HttpResponse::Ok().json(es)
 }
 
 // allow GET, POST
@@ -73,7 +103,7 @@ async fn handle_db_query(
     let qs = QString::from(query_str);
     let is_txn = qs.get("transaction").is_some();
     let timings = qs.get("timings").is_some();
-    let rediect = qs.get("redirect").is_some();
+    let redirect = qs.get("redirect").is_some();
     let timeout = match qs_get_i64(&qs, "timeout", 50) {
         Err(_) => return HttpResponse::BadRequest().body("invalid timeout argument"),
         Ok(v) => v,
@@ -83,7 +113,7 @@ async fn handle_db_query(
         Ok(v) => v,
     };
     let level = match qs.get("level") {
-        Some(sv) => match sv.to_lowercase() {
+        Some(sv) => match sv.to_lowercase().as_str() {
             "none" => command::query_request::Level::QueryRequestLevelNone,
             "srong" => command::query_request::Level::QueryRequestLevelStrong,
             "weak" => command::query_request::Level::QueryRequestLevelWeak,
@@ -106,20 +136,55 @@ async fn handle_db_query(
                 }),
                 timings: timings,
                 freshness: freshness,
-                level: level,
+                level: level.into(),
             };
             qr
         }
     };
-    HttpResponse::Ok().json(qr)
+
+    let res = tokio::time::timeout(
+        Duration::from_secs(timeout as u64),
+        node.query(qr, redirect),
+    )
+    .await;
+    match res {
+        Ok(v) => {
+            let qs = match v {
+                Ok(resp) => resp,
+                Err(e) => {
+                    let err_msg = HashMap::from([("error", format!("Failed to execute: {}", e))]);
+                    return HttpResponse::BadRequest().json(err_msg);
+                }
+            };
+            HttpResponse::Ok().json(qs)
+        }
+        Err(_) => {
+            HttpResponse::RequestTimeout().json(HashMap::from([("error", "execute timeout")]))
+        }
+    }
 }
 
 #[get("/db/backup")]
 async fn handle_db_backup(_req: HttpRequest, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
     let query_str = _req.query_string(); // "name=ferret"
     let qs = QString::from(query_str);
-    let is_txn = qs.get("fmt").is_some();
-    HttpResponse::Ok().body("haha")
+    let no_leader = qs.get("noleader").is_some();
+    let fmt = qs.get("fmt").map_or("binary", |v| v);
+    let f = match fmt.to_lowercase().as_str() {
+        "sql" => BackupFormat::SQL,
+        "binary" => BackupFormat::Binary,
+        _ => {
+            return HttpResponse::BadRequest().json(HashMap::from([(
+                "error",
+                format!("Invalid `fmt` argument: {}", fmt),
+            )]))
+        }
+    };
+    let res = match node.backup(!no_leader, f).await {
+        Ok(data) => data,
+        Err(e) => return store_err_to_resp(e),
+    };
+    HttpResponse::Ok().body(res)
 }
 
 // handleLoad loads the state contained in a .dump output. This API is different
@@ -156,7 +221,16 @@ struct JoinPayload {
 }
 #[post("/join")]
 async fn handle_join(req_body: String, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
-    HttpResponse::Ok().body(req_body)
+    let res = serde_json::from_str::<JoinRequest>(&req_body);
+    let req = match res {
+        Ok(r) => r,
+        Err(e) => return HttpResponse::BadRequest().body(format!("{}", e)),
+    };
+    let _ = match node.join(req).await {
+        Ok(resp) => resp,
+        Err(e) => return store_err_to_resp(e),
+    };
+    HttpResponse::Ok().body("ok")
 }
 
 #[post("/notify")]
@@ -166,7 +240,25 @@ async fn handle_notify(req_body: String, node: web::Data<Arc<RqliteNode>>) -> im
 
 #[delete("/remove")]
 async fn handle_remove(req_body: String, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
-    HttpResponse::Ok().body(req_body)
+    let res = serde_json::from_str::<HashMap<String, String>>(&req_body);
+    let params = match res {
+        Ok(v) => v,
+        Err(e) => return HttpResponse::BadRequest().body(format!("{}", e)),
+    };
+    let id_str = params.get("id");
+    if id_str.is_none() {
+        return HttpResponse::BadRequest().body(format!("need `id` argument"));
+    }
+    let id_str = id_str.unwrap();
+    let id = match id_str.parse::<u64>() {
+        Ok(v) => v,
+        Err(e) => return HttpResponse::BadGateway().body(format!("invalid `id`: {}", e)),
+    };
+
+    let req = RemoveNodeRequest { node_id: id };
+    node.remove(req)
+        .await
+        .map_or_else(|e| store_err_to_resp(e), |_| HttpResponse::Ok().body("ok"))
 }
 
 #[get("/status")]
@@ -192,12 +284,12 @@ struct NodeInfo {
 // This attempts to contact all the nodes in the cluster, so may take
 // some time to return.
 #[get("/nodes")]
-async fn handle_nodes(req_body: String, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
+async fn handle_nodes(_req_body: String, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
     let res = HashMap::from([("key1", NodeInfo::default())]);
     HttpResponse::Ok().json(res)
 }
 
 #[get("/healthz")]
-async fn handle_healthz(req_body: String) -> impl Responder {
+async fn handle_healthz(_req_body: String) -> impl Responder {
     HttpResponse::Ok().body("ok")
 }

@@ -120,6 +120,10 @@ impl SledRaftStore {
 
     //     Ok(endpoint)
     // }
+
+    pub fn is_opened(&self) -> bool {
+        self.is_opened
+    }
 }
 
 #[async_trait]

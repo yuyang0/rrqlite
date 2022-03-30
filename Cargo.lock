@@ -549,6 +549,7 @@ name = "core-db"
 version = "0.1.0"
 dependencies = [
  "anyerror",
+ "bytes",
  "core-command",
  "core-tracing",
  "core-util-misc",
@@ -604,6 +605,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "byteorder",
+ "bytes",
  "clap",
  "core-command",
  "core-db",
@@ -2103,13 +2105,16 @@ name = "rqlited"
 version = "0.1.0"
 dependencies = [
  "actix-rt",
+ "actix-server",
  "actix-web",
+ "async-trait",
  "clap",
  "core-command",
  "core-exception",
  "core-store",
  "core-tracing",
  "core-util-misc",
+ "futures",
  "openssl",
  "qstring",
  "serde",

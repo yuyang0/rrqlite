@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::errors::{StoreError, StoreResult};
-use crate::types::openraft::{HardState, NodeId, Vote};
+use crate::types::openraft::{NodeId, Vote};
 use core_sled::{sled, AsKeySpace, SledTree};
 use core_tracing::tracing;
 
@@ -105,24 +105,6 @@ impl RaftState {
             .insert(&RaftStateKey::Id, &RaftStateValue::NodeId(self.id))
             .await?;
         Ok(())
-    }
-
-    pub async fn write_hard_state(&self, hs: &HardState) -> StoreResult<()> {
-        let state = self.state();
-        state
-            .insert(
-                &RaftStateKey::HardState,
-                &RaftStateValue::HardState(hs.clone()),
-            )
-            .await?;
-        Ok(())
-    }
-
-    pub fn read_hard_state(&self) -> StoreResult<Option<HardState>> {
-        let state = self.state();
-        let hs = state.get(&RaftStateKey::HardState)?;
-        let hs = hs.map(HardState::from);
-        Ok(hs)
     }
 
     #[tracing::instrument(level = "debug", skip(self))]

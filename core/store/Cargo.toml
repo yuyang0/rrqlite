@@ -7,6 +7,7 @@ readme = "README.md"
 [dependencies]
 anyhow = { version = "1" }
 anyerror = { version = "0.1.4" }
+bytes = { version = "1.1" }
 thiserror = { version = "1.0" }
 async-trait = "0.1.36"
 clap = { version = "3.0.13", features = ["derive", "env"] }

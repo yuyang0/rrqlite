@@ -1,10 +1,9 @@
 use std::fmt;
 
-use crate::types::openraft::{Node, NodeId};
 use core_command::command;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum AppRequest {
     // /// Add node if absent
     // AddNode {
@@ -15,7 +14,7 @@ pub enum AppRequest {
     Execute(command::ExecuteRequest),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum AppResponse {
     Query(command::QueryResult),
     Execute(command::ExecuteResult),

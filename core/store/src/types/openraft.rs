@@ -1,7 +1,6 @@
 use crate::protobuf::RaftRequest;
 use crate::RqliteTypeConfig;
 use core_sled::openraft;
-use serde::{Deserialize, Serialize};
 
 pub use openraft::Node;
 pub type LogIndex = u64;
@@ -39,19 +38,10 @@ pub type ClientWriteError = openraft::error::ClientWriteError<RqliteTypeConfig>;
 pub type ForwardToLeader = openraft::error::ForwardToLeader<RqliteTypeConfig>;
 pub type Fatal = openraft::error::Fatal<RqliteTypeConfig>;
 pub type ChangeMembershipError = openraft::error::ChangeMembershipError<RqliteTypeConfig>;
-// pub type RqliteRaft = Raft<RqliteTypeConfig, Network, Arc<SledRaftStore>>;
 
-/// A record holding the hard state of a Raft node.
-///
-/// This model derives serde's traits for easily (de)serializing this
-/// model for storage & retrieval.
-#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Default)]
-pub struct HardState {
-    /// The last recorded term observed by this system.
-    pub current_term: u64,
-    /// The ID of the node voted for in the `current_term`.
-    pub voted_for: Option<NodeId>,
-}
+pub type RaftMetrics = openraft::RaftMetrics<RqliteTypeConfig>;
+
+// pub type RqliteRaft = Raft<RqliteTypeConfig, Network, Arc<SledRaftStore>>;
 
 impl tonic::IntoRequest<RaftRequest> for AppendEntriesRequest {
     fn into_request(self) -> tonic::Request<RaftRequest> {

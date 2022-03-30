@@ -14,7 +14,7 @@
 
 use std::fmt;
 
-use crate::types::openraft::{EffectiveMembership, HardState, LogId, NodeId, Vote};
+use crate::types::openraft::{EffectiveMembership, LogId, NodeId, Vote};
 use anyerror::AnyError;
 use core_sled::{sled, SledOrderedSerde, SledStorageError};
 use serde::Deserialize;
@@ -74,9 +74,6 @@ pub enum RaftStateKey {
     /// The node id.
     Id,
 
-    /// Hard state of the raft log, including `current_term` and `voted_vor`.
-    HardState,
-
     Vote,
 
     /// The id of the only active state machine.
@@ -90,7 +87,6 @@ pub enum RaftStateKey {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RaftStateValue {
     NodeId(NodeId),
-    HardState(HardState),
     Vote(Vote),
     /// active state machine, previous state machine
     StateMachineId((u64, u64)),
@@ -101,9 +97,6 @@ impl fmt::Display for RaftStateKey {
         match self {
             RaftStateKey::Id => {
                 write!(f, "Id")
-            }
-            RaftStateKey::HardState => {
-                write!(f, "HardState")
             }
             RaftStateKey::Vote => {
                 write!(f, "Vote")
@@ -119,8 +112,7 @@ impl SledOrderedSerde for RaftStateKey {
     fn ser(&self) -> Result<IVec, SledStorageError> {
         let i = match self {
             RaftStateKey::Id => 1,
-            RaftStateKey::HardState => 2,
-            RaftStateKey::Vote => 4,
+            RaftStateKey::Vote => 2,
             RaftStateKey::StateMachineId => 3,
         };
 
@@ -134,9 +126,8 @@ impl SledOrderedSerde for RaftStateKey {
         let slice = v.as_ref();
         match slice[0] {
             1 => Ok(RaftStateKey::Id),
-            2 => Ok(RaftStateKey::HardState),
+            2 => Ok(RaftStateKey::Vote),
             3 => Ok(RaftStateKey::StateMachineId),
-            4 => Ok(RaftStateKey::Vote),
             _ => Err(SledStorageError::SledError(AnyError::error(
                 "invalid key IVec",
             ))),
@@ -153,11 +144,11 @@ impl From<RaftStateValue> for NodeId {
     }
 }
 
-impl From<RaftStateValue> for HardState {
+impl From<RaftStateValue> for Vote {
     fn from(v: RaftStateValue) -> Self {
         match v {
-            RaftStateValue::HardState(x) => x,
-            _ => panic!("expect HardState"),
+            RaftStateValue::Vote(vt) => vt,
+            _ => panic!("expect Vote"),
         }
     }
 }
@@ -167,15 +158,6 @@ impl From<RaftStateValue> for (u64, u64) {
         match v {
             RaftStateValue::StateMachineId(x) => x,
             _ => panic!("expect StateMachineId"),
-        }
-    }
-}
-
-impl From<RaftStateValue> for Vote {
-    fn from(v: RaftStateValue) -> Self {
-        match v {
-            RaftStateValue::Vote(vt) => vt,
-            _ => panic!("expect Vote"),
         }
     }
 }

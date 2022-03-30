@@ -15,3 +15,6 @@ rusqlite = { version = "0.26", features = ["backup", "column_decltype"] }
 core-command = { path = "../command" }
 core-tracing = { path = "../tracing" }
 core-util-misc = { path = "../util/misc" }
+
+[dev-dependencies]
+bytes = "*"

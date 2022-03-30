@@ -12,14 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::net::Ipv4Addr;
-
 use crate::errors::StoreError;
 use crate::errors::StoreResult;
 use crate::types::openraft::NodeId;
-use crate::types::Endpoint;
 use clap::Parser;
-use core_exception::Result;
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 use serde::Serialize;
@@ -56,7 +52,41 @@ pub const KVSRV_ID: &str = "KVSRV_ID";
 
 pub const DEFAULT_LISTEN_HOST: &str = "127.0.0.1";
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Parser)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Parser)]
+#[serde(default)]
+pub struct FSMConfig {
+    // OnDisk enables on-disk mode.
+    #[clap(long = "on-disk", env = "RQLITED_ON_DISK")]
+    pub on_disk: bool,
+
+    // OnDiskPath sets the path to the SQLite file. May not be set.
+    #[clap(
+        long = "on-disk-path",
+        env = "RQLITED_ON_DISK_PATH",
+        default_value = ""
+    )]
+    pub on_disk_path: String,
+
+    // OnDiskStartup disables the in-memory on-disk startup optimization.
+    #[clap(long = "on-disk-startup", env = "RQLITED_ON_DISK_STARTUP")]
+    pub on_disk_startup: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Parser)]
+#[serde(default)]
+pub struct StoreConfig {
+    #[clap(flatten)]
+    pub fsm: FSMConfig,
+
+    #[clap(flatten)]
+    pub raft: RaftConfig,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Parser, Default)]
+#[serde(default)]
+pub struct NodeConfig {}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Parser, Default)]
 #[serde(default)]
 pub struct RaftConfig {
     /// Identify a config.
@@ -64,72 +94,140 @@ pub struct RaftConfig {
     #[clap(long, default_value = "")]
     pub config_id: String,
 
-    /// The local listening host for metadata communication.
-    /// This config does not need to be stored in raft-store,
-    /// only used when metasrv startup and listen to.
-    #[clap(long, env = KVSRV_LISTEN_HOST, default_value = DEFAULT_LISTEN_HOST)]
-    pub raft_listen_host: String,
+    // RaftAddr is the bind network address for the Raft server.
+    #[clap(
+        long = "raft-addr",
+        env = "RQLITED_RAFT_ADDR",
+        default_value = "localhost:4002"
+    )]
+    pub raft_addr: String,
 
-    /// The hostname that other nodes will use to connect this node.
-    /// This host should be stored in raft store and be replicated to the raft cluster,
-    /// i.e., when calling add_node().
-    /// Use `localhost` by default.
-    #[clap(long, env = KVSRV_ADVERTISE_HOST, default_value = "localhost")]
-    pub raft_advertise_host: String,
+    // RaftAdv is the advertised Raft server address.
+    #[clap(
+        long = "raft-adv-addr",
+        env = "RQLITED_RAFT_ADV_ADDR",
+        default_value = ""
+    )]
+    pub raft_adv_addr: String,
 
-    /// The listening port for metadata communication.
-    #[clap(long, env = KVSRV_API_PORT, default_value = "28004")]
-    pub raft_api_port: u32,
+    // JoinSrcIP sets the source IP address during Join request. May not be set.
+    #[clap(
+        long = "join-source-ip",
+        env = "RQLITED_JOIN_SOURCE_IP",
+        default_value = ""
+    )]
+    pub join_src_ip: String,
 
-    /// The dir to store persisted meta state, including raft logs, state machine etc.
-    #[clap(long, env = KVSRV_RAFT_DIR, default_value = "./_meta")]
-    pub raft_dir: String,
+    /// Bring up a metasrv node and join a cluster.
+    ///
+    /// The value is one or more addresses of a node in the cluster, to which this node sends a `join` request.
+    #[clap(
+        long = "join",
+        env = "RQLITED_JOIN",
+        multiple_occurrences = true,
+        multiple_values = true
+    )]
+    pub join: Vec<String>,
 
-    /// Whether to fsync meta to disk for every meta write(raft log, state machine etc).
-    /// No-sync brings risks of data loss during a crash.
-    /// You should only use this in a testing environment, unless YOU KNOW WHAT YOU ARE DOING.
-    #[clap(long, env = KVSRV_NO_SYNC)]
-    pub no_sync: bool,
+    // JoinAs sets the user join attempts should be performed as. May not be set.
+    #[clap(long = "join-as", env = "RQLITED_JOIN_AS", default_value = "")]
+    pub join_as: String,
 
-    /// The number of logs since the last snapshot to trigger next snapshot.
-    #[clap(long, env = KVSRV_SNAPSHOT_LOGS_SINCE_LAST, default_value = "1024")]
-    pub snapshot_logs_since_last: u64,
+    // JoinAttempts is the number of times a node should attempt to join using a
+    // given address.
+    #[clap(
+        long = "join-attempts",
+        env = "RQLITED_JOIN_ATTEMPTS",
+        default_value_t = 5
+    )]
+    pub join_attempts: u64,
 
-    /// The interval in milli seconds at which a leader send heartbeat message to followers.
-    /// Different value of this setting on leader and followers may cause unexpected behavior.
-    #[clap(long, env = KVSRV_HEARTBEAT_INTERVAL, default_value = "1000")]
-    pub heartbeat_interval: u64,
+    // JoinInterval is the time between retrying failed join operations.
+    #[clap(
+        long = "join-interval",
+        env = "RQLITED_JOIN_INTERVAL",
+        default_value_t = 3
+    )]
+    pub join_interval: u64,
 
-    /// The max time in milli seconds that a leader wait for install-snapshot ack from a follower or non-voter.
-    #[clap(long, env = KVSRV_INSTALL_SNAPSHOT_TIMEOUT, default_value = "4000")]
+    // // RaftLogLevel sets the minimum logging level for the Raft subsystem.
+    // #[clap(
+    //     long = "raft-log-level",
+    //     env = "RQLITED_RAFT_LOG_LEVEL",
+    //     default_value = "INFO"
+    // )]
+    // log_level: String,
+
+    // RaftNonVoter controls whether this node is a voting, read-only node.
+    #[clap(long = "raft-no-voter", env = "RQLITED_RAFT_NO_VOTER")]
+    pub non_voter: bool,
+
+    // RaftSnapThreshold is the number of outstanding log entries that trigger snapshot.
+    #[clap(long = "raft-snap", env = "RQLITED_RAFT_SNAP", default_value_t = 8192)]
+    pub snap_threshold: u64,
+
+    // RaftSnapInterval sets the threshold check interval.
+    #[clap(
+        long = "raft-snap-int",
+        env = "RQLITED_RAFT_SNAP_INT",
+        default_value_t = 30
+    )]
+    pub snap_interval: u64,
+
+    // RaftLeaderLeaseTimeout sets the leader lease timeout.
+    #[clap(
+        long = "raft-leader-lease-timeout",
+        env = "RQLITED_RAFT_LEADER_LEASE_TIMEOUT",
+        default_value_t = 0
+    )]
+    pub raft_leader_lease_timeout: u64,
+
+    // RaftHeartbeatTimeout sets the heartbeast timeout.
+    #[clap(
+        long = "raft-timeout",
+        env = "RQLITED_RAFT_TIMEOUT",
+        default_value_t = 1
+    )]
+    pub raft_heartbeat_timeout: u64,
+
+    // // RaftElectionTimeout sets the election timeout.
+    // RaftElectionTimeout time.Duration
+
+    // // RaftApplyTimeout sets the Log-apply timeout.
+    // RaftApplyTimeout time.Duration
+
+    // // RaftShutdownOnRemove sets whether Raft should be shutdown if the node is removed
+    // RaftShutdownOnRemove bool
+
+    // // RaftNoFreelistSync disables syncing Raft database freelist to disk. When true,
+    // // it improves the database write performance under normal operation, but requires
+    // // a full database re-sync during recovery.
+    // RaftNoFreelistSync bool
+    /// The max time in seconds that a leader wait for install-snapshot ack from a follower or non-voter.
+    #[clap(long, env = "RAFT_INSTALL_SNAPSHOT_TIMEOUT", default_value = "4")]
     pub install_snapshot_timeout: u64,
 
     /// The maximum number of applied logs to keep before purging
     #[clap(long, env = "RAFT_MAX_APPLIED_LOG_TO_KEEP", default_value = "1000")]
     pub max_applied_log_to_keep: u64,
 
-    /// Single node metasrv. It creates a single node cluster if meta data is not initialized.
-    /// Otherwise it opens the previous one.
-    /// This is mainly for testing purpose.
-    #[clap(long, env = KVSRV_SINGLE)]
-    pub single: bool,
-
-    /// Bring up a metasrv node and join a cluster.
-    ///
-    /// The value is one or more addresses of a node in the cluster, to which this node sends a `join` request.
-    #[clap(
-        long,
-        env = "METASRV_JOIN",
-        multiple_occurrences = true,
-        multiple_values = true
-    )]
-    pub join: Vec<String>,
-
     /// The node id. Only used when this server is not initialized,
     ///  e.g. --boot or --single for the first time.
     ///  Otherwise this argument is ignored.
-    #[clap(long, env = KVSRV_ID, default_value = "0")]
+    #[clap(long, env = "RQLITED_ID", default_value = "0")]
     pub id: NodeId,
+
+    /// Whether to fsync meta to disk for every meta write(raft log, state machine etc).
+    /// No-sync brings risks of data loss during a crash.
+    /// You should only use this in a testing environment, unless YOU KNOW WHAT YOU ARE DOING.
+    #[clap(long, env = "RQLITED_NO_SYNC")]
+    pub no_sync: bool,
+
+    /// Single node metasrv. It creates a single node cluster if meta data is not initialized.
+    /// Otherwise it opens the previous one.
+    /// This is mainly for testing purpose.
+    #[clap(long, env = "RQLITED_SINGLE")]
+    pub single: bool,
 
     /// For test only: specifies the tree name prefix
     #[clap(long, default_value = "")]
@@ -150,26 +248,37 @@ pub fn get_default_raft_listen_host() -> String {
     DEFAULT_LISTEN_HOST.to_string()
 }
 
-impl Default for RaftConfig {
-    fn default() -> Self {
-        Self {
-            config_id: "".to_string(),
-            raft_listen_host: get_default_raft_listen_host(),
-            raft_advertise_host: get_default_raft_advertise_host(),
-            raft_api_port: 28004,
-            raft_dir: "./_meta".to_string(),
-            no_sync: false,
-            snapshot_logs_since_last: 1024,
-            heartbeat_interval: 1000,
-            install_snapshot_timeout: 4000,
-            max_applied_log_to_keep: 1000,
-            single: false,
-            join: vec![],
-            id: 0,
-            sled_tree_prefix: "".to_string(),
+impl RaftConfig {
+    pub fn validate(&mut self) -> StoreResult<()> {
+        if self.raft_addr.is_empty() {
+            return Err(StoreError::InvalidConfig(format!(
+                "raft address is required."
+            )));
         }
+        if self.join_src_ip.is_empty() {
+            self.join_src_ip = String::from(&self.raft_addr);
+        }
+        Ok(())
     }
 }
+
+// impl Default for RaftConfig {
+//     fn default() -> Self {
+//         Self {
+//             config_id: "".to_string(),
+//             raft_addr: get_default_raft_listen_host(),
+//             raft_adv_addr: get_default_raft_advertise_host(),
+//             no_sync: false,
+//             snap_threshold: 1024,
+//             install_snapshot_timeout: 4000,
+//             max_applied_log_to_keep: 1000,
+//             single: false,
+//             join: vec![],
+//             id: 0,
+//             sled_tree_prefix: "".to_string(),
+//         }
+//     }
+// }
 
 impl RaftConfig {
     /// StructOptToml provides a default Default impl that loads config from cli args,
@@ -179,47 +288,6 @@ impl RaftConfig {
     /// Thus we need another method to generate an empty default instance.
     pub fn empty() -> Self {
         <Self as Parser>::parse_from(&Vec::<&'static str>::new())
-    }
-
-    pub fn raft_api_listen_host_string(&self) -> String {
-        format!("{}:{}", self.raft_listen_host, self.raft_api_port)
-    }
-
-    pub fn raft_api_listen_host_endpoint(&self) -> Endpoint {
-        Endpoint {
-            addr: self.raft_listen_host.clone(),
-            port: self.raft_api_port,
-        }
-    }
-
-    pub fn raft_api_advertise_host_endpoint(&self) -> Endpoint {
-        Endpoint {
-            addr: self.raft_advertise_host.clone(),
-            port: self.raft_api_port,
-        }
-    }
-
-    /// Support ip address and hostname
-    pub async fn raft_api_addr(&self) -> Result<Endpoint> {
-        let ipv4_addr = self.raft_advertise_host.as_str().parse::<Ipv4Addr>();
-        match ipv4_addr {
-            Ok(addr) => Ok(Endpoint {
-                addr: addr.to_string(),
-                port: self.raft_api_port,
-            }),
-            Err(_) => {
-                let mut _ip_addrs = tokio::net::lookup_host(&self.raft_advertise_host).await?;
-                let _ip_addr = _ip_addrs
-                    .next()
-                    .ok_or(StoreError::InvalidConfig(String::from(
-                        "DNS resolve error for raft advertise addr",
-                    )))?;
-                Ok(Endpoint {
-                    addr: _ip_addr.to_string(),
-                    port: self.raft_api_port,
-                })
-            }
-        }
     }
 
     /// Returns true to fsync after a write operation to meta.
@@ -233,8 +301,7 @@ impl RaftConfig {
                 "--join and --single can not be both set",
             )));
         }
-        let self_addr = self.raft_api_listen_host_string();
-        if self.join.contains(&self_addr) {
+        if self.join.contains(&self.raft_addr) {
             return Err(StoreError::InvalidConfig(String::from(
                 "--join must not be set to itself",
             )));

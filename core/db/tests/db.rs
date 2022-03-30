@@ -1,3 +1,5 @@
+use bytes::BufMut;
+use core_command::command;
 use core_db::db::{Context, DB};
 use core_db::error::Result;
 
@@ -86,5 +88,37 @@ fn test_serialize_deserialize() -> Result<()> {
     disk_db.deserialize(&data)?;
 
     check_initial_data(&mut disk_db)?;
+    Ok(())
+}
+
+#[test]
+fn test_dump_sql() -> Result<()> {
+    let mut mem_db = DB::new_mem_db()?;
+    prepare_db(&mut mem_db)?;
+
+    let mut buf = Vec::with_capacity(1024).writer();
+
+    let ctx = Context::default();
+    mem_db.backup_to_sql(&ctx, &mut buf)?;
+    let s = String::from_utf8(buf.into_inner()).unwrap();
+    println!("+++++++ {}", s);
+    Ok(())
+}
+
+#[test]
+fn test_agg() -> Result<()> {
+    let mut mem_db = DB::new_mem_db()?;
+    prepare_db(&mut mem_db)?;
+
+    let ctx = Context::default();
+    let res = mem_db.query_str_stmt(&ctx, "SELECT COUNT(*) FROM contacts")?;
+    println!("agg ++++ {:?}", res);
+    let res = res.results;
+    assert_eq!(res.len(), 1);
+    assert_eq!(res[0].values.len(), 1);
+    assert_eq!(
+        res[0].values[0].parameters[0].value,
+        Some(command::parameter::Value::I(2))
+    );
     Ok(())
 }
