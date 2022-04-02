@@ -50,7 +50,8 @@ message QueryRows {
 
 message QueryResult {
 	repeated QueryRows results = 1;
-	int32 time = 2;
+	string error = 2;
+	double time = 3;
 }
 
 message ExecuteRequest {
@@ -67,7 +68,8 @@ message SingleExecuteResult {
 
 message ExecuteResult {
 	repeated SingleExecuteResult results = 1;
-	int32 time = 2;
+	string error = 2;
+	double time = 3;
 }
 
 message Noop {
