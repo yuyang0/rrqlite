@@ -1,5 +1,5 @@
 use bytes::BufMut;
-use core_command::command;
+use core_command::command::{self, QueryResult};
 use core_db::db::{Context, DB};
 use core_db::error::Result;
 
@@ -120,5 +120,44 @@ fn test_agg() -> Result<()> {
         res[0].values[0].parameters[0].value,
         Some(command::parameter::Value::I(2))
     );
+    Ok(())
+}
+
+#[test]
+fn test_pragma() -> Result<()> {
+    let mut mem_db = DB::new_mem_db()?;
+    prepare_db(&mut mem_db)?;
+
+    let ctx = Context::default();
+    // use select
+    let res = mem_db.query_str_stmt(&ctx, "SELECT * FROM pragma_table_info('contacts')")?;
+    println!("agg ++++ {:?}", res);
+    fn check_res(res: QueryResult) {
+        let res = res.results;
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].values.len(), 4);
+        assert_eq!(
+            res[0].values[0].parameters[1].value,
+            Some(command::parameter::Value::S(String::from("contact_id")))
+        );
+        assert_eq!(
+            res[0].values[1].parameters[1].value,
+            Some(command::parameter::Value::S(String::from("name")))
+        );
+        assert_eq!(
+            res[0].values[2].parameters[1].value,
+            Some(command::parameter::Value::S(String::from("email")))
+        );
+        assert_eq!(
+            res[0].values[3].parameters[1].value,
+            Some(command::parameter::Value::S(String::from("data")))
+        );
+    }
+    check_res(res);
+
+    let res = mem_db.query_str_stmt(&ctx, "pragma table_info('contacts')")?;
+    println!("agg ++++ {:?}", res);
+    check_res(res);
+
     Ok(())
 }
