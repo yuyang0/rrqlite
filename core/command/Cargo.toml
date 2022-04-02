@@ -12,3 +12,6 @@ serde = { version = "1.0.136", features = ["derive"] }
 
 [build-dependencies]
 prost-build = { version = "0.7.0" }
+
+[dev-dependencies]
+serde_json = { version = "=1.0" }
