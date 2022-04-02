@@ -167,9 +167,32 @@ async fn test_cluster() -> anyhow::Result<()> {
     tokio::time::sleep(Duration::from_millis(200)).await;
 
     // --- Read it on every node.
+    fn check_table(res: command::QueryResult) {
+        let res = res.results;
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].values.len(), 4);
+        assert_eq!(
+            res[0].values[0].parameters[1].value,
+            Some(command::parameter::Value::S(String::from("contact_id")))
+        );
+        assert_eq!(
+            res[0].values[1].parameters[1].value,
+            Some(command::parameter::Value::S(String::from("name")))
+        );
+        assert_eq!(
+            res[0].values[2].parameters[1].value,
+            Some(command::parameter::Value::S(String::from("email")))
+        );
+        assert_eq!(
+            res[0].values[3].parameters[1].value,
+            Some(command::parameter::Value::S(String::from("data")))
+        );
+    }
+
     let tables_sql = "
-    SELECT name FROM contacts
+        pragma table_info('contacts')
     ";
+
     let qr = command::QueryRequest {
         request: Some(command::Request {
             transaction: true,
@@ -185,18 +208,17 @@ async fn test_cluster() -> anyhow::Result<()> {
     println!("=== check tables on node 1");
     let res = node1.query(qr.clone(), false).await?;
     println!("~~~~ node1 query result {:?}", res);
-    assert_eq!(res.results.len(), 1);
-    assert_eq!(res.results[0].values.len(), 0);
+    check_table(res);
 
     println!("=== check table on node 2");
     let res = node2.query(qr.clone(), false).await?;
-    assert_eq!(res.results.len(), 1);
-    assert_eq!(res.results[0].values.len(), 0);
+    check_table(res);
 
     println!("=== check table on node 3");
     let res = node3.query(qr.clone(), false).await?;
-    assert_eq!(res.results.len(), 1);
-    assert_eq!(res.results[0].values.len(), 0);
+    check_table(res);
+    // assert_eq!(res.results.len(), 1);
+    // assert_eq!(res.results[0].values.len(), 0);
 
     // 2 write data to table
     let exec_sql = "
