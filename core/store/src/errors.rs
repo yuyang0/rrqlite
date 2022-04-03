@@ -1,10 +1,10 @@
-use crate::types::openraft::{ChangeMembershipError, Fatal, ForwardToLeader};
 use anyerror;
 use core_exception::ErrorCode;
 use core_sled::SledStorageError;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use crate::types::openraft::{ChangeMembershipError, Fatal, ForwardToLeader};
 
 // represent network related errors
 #[derive(Error, Serialize, Deserialize, Debug, Clone, PartialEq)]

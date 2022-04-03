@@ -1,4 +1,6 @@
-use crate::error::Result;
+use std::fs;
+use std::path::Path;
+
 use core_command::command;
 use core_tracing::tracing;
 use core_util_misc::random::thread_rand_string;
@@ -7,8 +9,7 @@ use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::types::{ToSqlOutput, Value, ValueRef};
 use rusqlite::{DatabaseName, OpenFlags, Row, ToSql, Transaction};
 
-use std::fs;
-use std::path::Path;
+use crate::error::Result;
 
 struct Parameter<'a> {
     p: &'a Option<command::parameter::Value>,

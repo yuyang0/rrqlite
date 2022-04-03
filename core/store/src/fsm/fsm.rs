@@ -1,10 +1,14 @@
-use anyerror::AnyError;
-use bytes::BufMut;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
+use std::path::Path;
+use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use anyerror::AnyError;
 use async_trait::async_trait;
+use bytes::BufMut;
+use core_command::command;
+use core_db::{Context, DB};
 use core_sled::openraft;
+use core_tracing::tracing;
 use openraft::MessageSummary;
 use serde::{Deserialize, Serialize};
 
@@ -12,11 +16,6 @@ use crate::config::FSMConfig;
 use crate::errors::{StoreError, StoreResult};
 use crate::types::openraft::{EffectiveMembership, Entry, EntryPayload, LogId, SnapshotMeta};
 use crate::types::{AppRequest, AppResponse, BackupFormat};
-use core_command::command;
-use core_db::{Context, DB};
-use core_tracing::tracing;
-use std::path::Path;
-use std::sync::Arc;
 
 const LAST_APPLIED_KEY: &'static str = "last-applied-key";
 const LAST_MEMBERSHIP_KEY: &'static str = "last-membership-key";
@@ -252,7 +251,8 @@ impl FSM for SQLFsm {
     async fn snapshot(&self) -> StoreResult<(Vec<u8>, LogId, String)> {
         let last_applied = self.get_last_applied()?;
 
-        // NOTE: An initialize node/cluster always has the first log contains membership config.
+        // NOTE: An initialize node/cluster always has the first log contains membership
+        // config.
 
         let last_applied =
             last_applied.expect("not allowed to build snapshot with empty state machine");

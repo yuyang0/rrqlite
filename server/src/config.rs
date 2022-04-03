@@ -1,8 +1,7 @@
 use clap::Parser;
 use core_exception::{ErrorCode, Result};
 use core_store::config::StoreConfig;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 macro_rules! load_field_from_env {
     ($field:expr, $field_type: ty, $env:expr) => {
@@ -186,9 +185,9 @@ pub struct HttpConfig {
 
 impl Config {
     /// First load configs from args.
-    /// If config file is not empty, e.g: `-c xx.toml`, reload config from the file.
-    /// Prefer to use environment variables in cloud native deployment.
-    /// Override configs base on environment variables.
+    /// If config file is not empty, e.g: `-c xx.toml`, reload config from the
+    /// file. Prefer to use environment variables in cloud native
+    /// deployment. Override configs base on environment variables.
     pub fn load() -> Result<Self> {
         let mut cfg = Config::parse();
         if !cfg.config_file.is_empty() {
@@ -219,14 +218,16 @@ impl Config {
     // pub fn load_from_env(cfg: &mut Config) {
     //     load_field_from_env!(cfg.log_level, String, METASRV_LOG_LEVEL);
     //     load_field_from_env!(cfg.log_dir, String, METASRV_LOG_DIR);
-    //     load_field_from_env!(cfg.metric_api_address, String, METASRV_METRIC_API_ADDRESS);
-    //     load_field_from_env!(cfg.admin_api_address, String, ADMIN_API_ADDRESS);
-    //     load_field_from_env!(cfg.admin_tls_server_cert, String, ADMIN_TLS_SERVER_CERT);
-    //     load_field_from_env!(cfg.admin_tls_server_key, String, ADMIN_TLS_SERVER_KEY);
-    //     load_field_from_env!(cfg.grpc_api_address, String, METASRV_GRPC_API_ADDRESS);
-    //     load_field_from_env!(cfg.grpc_tls_server_cert, String, GRPC_TLS_SERVER_CERT);
-    //     load_field_from_env!(cfg.grpc_tls_server_key, String, GRPC_TLS_SERVER_KEY);
-    //     load_field_from_env!(
+    //     load_field_from_env!(cfg.metric_api_address, String,
+    // METASRV_METRIC_API_ADDRESS);     load_field_from_env!(cfg.
+    // admin_api_address, String, ADMIN_API_ADDRESS);     load_field_from_env!
+    // (cfg.admin_tls_server_cert, String, ADMIN_TLS_SERVER_CERT);
+    //     load_field_from_env!(cfg.admin_tls_server_key, String,
+    // ADMIN_TLS_SERVER_KEY);     load_field_from_env!(cfg.grpc_api_address,
+    // String, METASRV_GRPC_API_ADDRESS);     load_field_from_env!(cfg.
+    // grpc_tls_server_cert, String, GRPC_TLS_SERVER_CERT);
+    //     load_field_from_env!(cfg.grpc_tls_server_key, String,
+    // GRPC_TLS_SERVER_KEY);     load_field_from_env!(
     //         cfg.raft_config.raft_listen_host,
     //         String,
     //         raft_config::KVSRV_LISTEN_HOST
@@ -246,8 +247,8 @@ impl Config {
     //         String,
     //         raft_config::KVSRV_RAFT_DIR
     //     );
-    //     load_field_from_env!(cfg.raft_config.no_sync, bool, raft_config::KVSRV_NO_SYNC);
-    //     load_field_from_env!(
+    //     load_field_from_env!(cfg.raft_config.no_sync, bool,
+    // raft_config::KVSRV_NO_SYNC);     load_field_from_env!(
     //         cfg.raft_config.snapshot_logs_since_last,
     //         u64,
     //         raft_config::KVSRV_SNAPSHOT_LOGS_SINCE_LAST
@@ -262,7 +263,7 @@ impl Config {
     //         u64,
     //         raft_config::KVSRV_INSTALL_SNAPSHOT_TIMEOUT
     //     );
-    //     load_field_from_env!(cfg.raft_config.single, bool, raft_config::KVSRV_SINGLE);
-    //     load_field_from_env!(cfg.raft_config.id, u64, raft_config::KVSRV_ID);
-    // }
+    //     load_field_from_env!(cfg.raft_config.single, bool,
+    // raft_config::KVSRV_SINGLE);     load_field_from_env!(cfg.raft_config.id,
+    // u64, raft_config::KVSRV_ID); }
 }

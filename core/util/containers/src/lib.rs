@@ -14,5 +14,4 @@
 
 mod pool;
 
-pub use pool::ItemManager;
-pub use pool::Pool;
+pub use pool::{ItemManager, Pool};

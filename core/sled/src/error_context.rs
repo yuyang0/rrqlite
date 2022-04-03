@@ -14,8 +14,7 @@
 
 use std::error::Error;
 
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, thiserror::Error)]
 #[error("{err} while {context}")]

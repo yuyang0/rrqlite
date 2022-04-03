@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use core_exception::ErrorCode;
@@ -24,8 +23,9 @@ use tokio::sync::broadcast;
 use crate::Stoppable;
 
 /// Handle a group of `Stoppable` tasks.
-/// When a user press ctrl-c, it calls the `stop()` method on every task to close them.
-/// If a second ctrl-c is pressed, it sends a `()` through the `force` channel to notify tasks to shutdown at once.
+/// When a user press ctrl-c, it calls the `stop()` method on every task to
+/// close them. If a second ctrl-c is pressed, it sends a `()` through the
+/// `force` channel to notify tasks to shutdown at once.
 ///
 /// Once `StopHandle` is dropped, it triggers a force stop on every tasks in it.
 pub struct StopHandle {
@@ -41,7 +41,8 @@ impl StopHandle {
         }
     }
 
-    /// Call `Stoppable::stop` on every task, with an arg of **force shutdown signal receiver**.
+    /// Call `Stoppable::stop` on every task, with an arg of **force shutdown
+    /// signal receiver**.
     ///
     /// It blocks until all `Stoppable::stop()` return.
     pub fn stop_all(
@@ -73,8 +74,9 @@ impl StopHandle {
     /// - The first signal initiates a **graceful** shutdown by calling
     ///   `Stoppable::stop(Option<rx>)` on every managed tasks.
     ///
-    /// - The second signal will be passed through `rx`, and it's the impl's duty to decide
-    ///   whether to forcefully shutdown or just ignore the second signal.
+    /// - The second signal will be passed through `rx`, and it's the impl's
+    ///   duty to decide whether to forcefully shutdown or just ignore the
+    ///   second signal.
     pub fn wait_to_terminate(
         mut self,
         signal: broadcast::Sender<()>,
@@ -98,9 +100,10 @@ impl StopHandle {
         }
     }
 
-    /// Build a Sender `tx` for user to send **stop** signal to all tasks managed by this StopHandle.
-    /// It also installs a `ctrl-c` monitor to let user send a signal to the `tx` by press `ctrl-c`.
-    /// Thus there are two ways to stop tasks: `ctrl-c` or `tx.send()`.
+    /// Build a Sender `tx` for user to send **stop** signal to all tasks
+    /// managed by this StopHandle. It also installs a `ctrl-c` monitor to
+    /// let user send a signal to the `tx` by press `ctrl-c`. Thus there are
+    /// two ways to stop tasks: `ctrl-c` or `tx.send()`.
     ///
     /// How to deal with the signal is not defined in this method.
     pub fn install_termination_handle() -> broadcast::Sender<()> {

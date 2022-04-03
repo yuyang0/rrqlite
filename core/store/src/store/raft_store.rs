@@ -3,20 +3,14 @@ use std::io::Cursor;
 use std::ops::RangeBounds;
 use std::sync::Arc;
 
-use crate::types::openraft::{EffectiveMembership, Entry, LogId, NodeId};
+use core_sled::get_sled_db;
 pub use core_sled::{openraft, sled};
 use openraft::async_trait::async_trait;
-use openraft::storage::LogState;
-use openraft::storage::Snapshot;
-use openraft::ErrorSubject;
-use openraft::ErrorVerb;
-use openraft::RaftLogReader;
-use openraft::RaftSnapshotBuilder;
-use openraft::RaftStorage;
-use openraft::SnapshotMeta;
-use openraft::StateMachineChanges;
-use openraft::StorageError;
-use openraft::Vote;
+use openraft::storage::{LogState, Snapshot};
+use openraft::{
+    ErrorSubject, ErrorVerb, RaftLogReader, RaftSnapshotBuilder, RaftStorage, SnapshotMeta,
+    StateMachineChanges, StorageError, Vote,
+};
 use tokio::sync::RwLock;
 
 use super::log::RaftLog;
@@ -25,24 +19,27 @@ use super::ToStorageError;
 use crate::config::RaftConfig;
 use crate::errors::StoreResult;
 use crate::fsm::{FSMSnapshot, FSM};
+use crate::types::openraft::{EffectiveMembership, Entry, LogId, NodeId};
 use crate::types::AppResponse;
 use crate::RqliteTypeConfig;
-use core_sled::get_sled_db;
 
 pub struct SledRaftStore {
     /// The ID of the Raft node for which this storage instances is configured.
-    /// ID is also stored in raft_state. Since `id` never changes, this is a cache for fast access.
+    /// ID is also stored in raft_state. Since `id` never changes, this is a
+    /// cache for fast access.
     pub id: NodeId,
 
     config: RaftConfig,
 
-    /// If the instance is opened from an existent state(e.g. load from disk) or created.
+    /// If the instance is opened from an existent state(e.g. load from disk) or
+    /// created.
     is_opened: bool,
 
     /// The sled db for log and raft_state.
-    /// state machine is stored in another sled db since it contains user data and needs to be export/import as a whole.
-    /// This db is also used to generate a locally unique id.
-    /// Currently the id is used to create a unique snapshot id.
+    /// state machine is stored in another sled db since it contains user data
+    /// and needs to be export/import as a whole. This db is also used to
+    /// generate a locally unique id. Currently the id is used to create a
+    /// unique snapshot id.
     _db: sled::Db,
 
     // Raft state includes:
@@ -56,10 +53,13 @@ pub struct SledRaftStore {
     /// The Raft state machine.
     ///
     /// sled db has its own concurrency control, e.g., batch or transaction.
-    /// But we still need a lock, when installing a snapshot, which is done by replacing the state machine:
+    /// But we still need a lock, when installing a snapshot, which is done by
+    /// replacing the state machine:
     ///
-    /// - Acquire a read lock to WRITE or READ. Transactional RW relies on sled concurrency control.
-    /// - Acquire a write lock before installing a snapshot, to prevent any write to the db.
+    /// - Acquire a read lock to WRITE or READ. Transactional RW relies on sled
+    ///   concurrency control.
+    /// - Acquire a write lock before installing a snapshot, to prevent any
+    ///   write to the db.
     pub state_machine: Arc<dyn FSM>,
 
     /// The current snapshot.
@@ -111,12 +111,13 @@ impl SledRaftStore {
         })
     }
 
-    // pub async fn get_node_endpoint(&self, node_id: &NodeId) -> StoreResult<Endpoint> {
-    //     let endpoint = self
+    // pub async fn get_node_endpoint(&self, node_id: &NodeId) ->
+    // StoreResult<Endpoint> {     let endpoint = self
     //         .get_node(node_id)
     //         .await?
     //         .map(|n| n.endpoint)
-    //         .ok_or_else(|| StoreError::GetNodeAddrError(format!("node id: {}", node_id)))?;
+    //         .ok_or_else(|| StoreError::GetNodeAddrError(format!("node id: {}",
+    // node_id)))?;
 
     //     Ok(endpoint)
     // }

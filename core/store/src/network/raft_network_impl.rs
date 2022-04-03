@@ -1,31 +1,25 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::protobuf::raft_service_client::RaftServiceClient;
-use crate::types::openraft::{
-    AppendEntriesRequest, AppendEntriesResponse, InstallSnapshotRequest, InstallSnapshotResponse,
-    VoteRequest, VoteResponse,
-};
 use core_sled::openraft;
 use core_tracing::tracing;
 use core_util_containers::{ItemManager, Pool};
-use openraft::async_trait::async_trait;
-use openraft::error::AppendEntriesError;
-use openraft::error::InstallSnapshotError;
-use openraft::error::NetworkError;
-use openraft::error::RPCError;
 // use openraft::error::RemoteError;
-use openraft::error::VoteError;
-use openraft::MessageSummary;
-use openraft::Node;
-use openraft::{RaftNetwork, RaftNetworkFactory};
+use openraft::{
+    async_trait::async_trait,
+    error::{AppendEntriesError, InstallSnapshotError, NetworkError, RPCError, VoteError},
+    MessageSummary, Node, RaftNetwork, RaftNetworkFactory,
+};
 use serde::de::DeserializeOwned;
 // use serde::Serialize;
-use tonic::client::GrpcService;
-use tonic::transport::channel::Channel;
+use tonic::{client::GrpcService, transport::channel::Channel};
 
+use crate::protobuf::raft_service_client::RaftServiceClient;
 use crate::store::SledRaftStore;
-use crate::types::openraft::NodeId;
+use crate::types::openraft::{
+    AppendEntriesRequest, AppendEntriesResponse, InstallSnapshotRequest, InstallSnapshotResponse,
+    NodeId, VoteRequest, VoteResponse,
+};
 use crate::RqliteTypeConfig;
 
 struct ChannelManager {}
@@ -96,7 +90,8 @@ impl AppNetwork {
     }
 }
 
-// NOTE: This could be implemented also on `Arc<ExampleNetwork>`, but since it's empty, implemented directly.
+// NOTE: This could be implemented also on `Arc<ExampleNetwork>`, but since it's
+// empty, implemented directly.
 #[async_trait]
 impl RaftNetworkFactory<RqliteTypeConfig> for AppNetwork {
     type Network = AppNetworkConnection;
@@ -253,13 +248,13 @@ impl RaftNetwork<RqliteTypeConfig> for AppNetworkConnection {
 //     }
 // }
 
-// // NOTE: This could be implemented also on `Arc<ExampleNetwork>`, but since it's empty, implemented directly.
-// #[async_trait]
+// // NOTE: This could be implemented also on `Arc<ExampleNetwork>`, but since
+// it's empty, implemented directly. #[async_trait]
 // impl RaftNetworkFactory<RqliteTypeConfig> for AppNetwork {
 //     type Network = ExampleNetworkConnection;
 
-//     async fn connect(&mut self, target: ExampleNodeId, node: Option<&Node>) -> Self::Network {
-//         ExampleNetworkConnection {
+//     async fn connect(&mut self, target: ExampleNodeId, node: Option<&Node>)
+// -> Self::Network {         ExampleNetworkConnection {
 //             owner: AppNetwork {},
 //             target,
 //             target_node: node.cloned(),
@@ -283,8 +278,8 @@ impl RaftNetwork<RqliteTypeConfig> for AppNetworkConnection {
 //         RPCError<RqliteTypeConfig, AppendEntriesError<ExampleTypeConfig>>,
 //     > {
 //         self.owner
-//             .send_rpc(self.target, self.target_node.as_ref(), "raft-append", req)
-//             .await
+//             .send_rpc(self.target, self.target_node.as_ref(), "raft-append",
+// req)             .await
 //     }
 
 //     async fn send_install_snapshot(
@@ -295,8 +290,8 @@ impl RaftNetwork<RqliteTypeConfig> for AppNetworkConnection {
 //         RPCError<RqliteTypeConfig, InstallSnapshotError<RqliteTypeConfig>>,
 //     > {
 //         self.owner
-//             .send_rpc(self.target, self.target_node.as_ref(), "raft-snapshot", req)
-//             .await
+//             .send_rpc(self.target, self.target_node.as_ref(),
+// "raft-snapshot", req)             .await
 //     }
 
 //     async fn send_vote(
@@ -307,7 +302,7 @@ impl RaftNetwork<RqliteTypeConfig> for AppNetworkConnection {
 //         RPCError<RqliteTypeConfig, VoteError<RqliteTypeConfig>>,
 //     > {
 //         self.owner
-//             .send_rpc(self.target, self.target_node.as_ref(), "raft-vote", req)
-//             .await
+//             .send_rpc(self.target, self.target_node.as_ref(), "raft-vote",
+// req)             .await
 //     }
 // }

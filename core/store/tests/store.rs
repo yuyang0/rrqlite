@@ -1,3 +1,7 @@
+use std::fs;
+use std::path::Path;
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use core_sled::{init_temp_sled_db, openraft};
 use core_store::config::RaftConfig;
@@ -6,13 +10,11 @@ use core_store::store::SledRaftStore;
 use core_store::RqliteTypeConfig;
 use core_util_misc::GlobalSequence;
 use openraft::testing::StoreBuilder;
-use std::fs;
-use std::path::Path;
-use std::sync::Arc;
 
 /// 1. Open a temp sled::Db for all tests.
 /// 2. Initialize a global tracing.
-/// 3. Create a span for a test case. One needs to enter it by `span.enter()` and keeps the guard held.
+/// 3. Create a span for a test case. One needs to enter it by `span.enter()`
+/// and keeps the guard held.
 // #[macro_export]
 macro_rules! init_meta_ut {
     () => {{

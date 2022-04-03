@@ -14,10 +14,10 @@
 
 //! Define a process-wise global sled::Db.
 //! sled::Db does not allow to open multiple db in one process.
-//! One of the known issue is that `flush_asynce()` in different tokio runtime on different db result in a deadlock.
+//! One of the known issue is that `flush_asynce()` in different tokio runtime
+//! on different db result in a deadlock.
 
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use once_cell::sync::Lazy;
 use tempfile::TempDir;
@@ -68,7 +68,10 @@ pub fn init_temp_sled_db(temp_dir: TempDir) {
     };
 
     if !inited_as_temp {
-        panic!("sled db is already initialized with specified path: {}, can not re-init with temp path {}", curr_path, temp_path);
+        panic!(
+            "sled db is already initialized with specified path: {}, can not re-init with temp path {}",
+            curr_path, temp_path
+        );
     }
 }
 

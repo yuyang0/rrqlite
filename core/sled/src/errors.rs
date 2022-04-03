@@ -16,8 +16,7 @@ use std::fmt::Display;
 
 use anyerror::AnyError;
 use core_exception::ErrorCode;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sled::transaction::UnabortableTransactionError;
 use thiserror::Error;
 
@@ -143,8 +142,8 @@ where
     /// Wrap the error value with MetaError. It is lazily evaluated:
     /// only when an error does occur.
     ///
-    /// `err_code_fn` is one of the MetaError builder function such as `MetaError::Ok`.
-    /// `context_fn` builds display_text for the MetaError.
+    /// `err_code_fn` is one of the MetaError builder function such as
+    /// `MetaError::Ok`. `context_fn` builds display_text for the MetaError.
     fn map_error_to_meta_storage_error<ErrFn, D>(
         self,
         err_code_fn: ErrFn,

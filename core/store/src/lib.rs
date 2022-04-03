@@ -10,14 +10,15 @@ mod raft_node;
 pub mod store;
 pub mod types;
 
+use std::sync::Arc;
+
+use core_sled::openraft;
+use openraft::Raft;
 pub use raft_node::RqliteNode;
+use types::{AppRequest, AppResponse};
 
 use crate::network::AppNetwork;
 use crate::store::SledRaftStore;
-use core_sled::openraft;
-use openraft::Raft;
-use std::sync::Arc;
-use types::{AppRequest, AppResponse};
 
 openraft::declare_raft_types!(
     /// Declare the type configuration for example K/V store.

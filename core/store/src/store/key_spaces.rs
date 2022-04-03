@@ -1,8 +1,9 @@
+use core_sled::SledKeySpace;
+
 use super::kv_types::{
     FSMMetaKey, LogMetaKey, LogMetaValue, RaftStateKey, RaftStateValue, StateMachineMetaValue,
 };
 use crate::types::openraft::{Entry, LogIndex};
-use core_sled::SledKeySpace;
 
 /// Types for raft log in SledTree
 pub struct Logs {}
@@ -22,7 +23,8 @@ impl SledKeySpace for LogMeta {
     type V = LogMetaValue;
 }
 
-/// Key-Value Types for storing meta data of a raft state machine in sled::Tree, e.g. the last applied log id.
+/// Key-Value Types for storing meta data of a raft state machine in sled::Tree,
+/// e.g. the last applied log id.
 pub struct FSMMeta {}
 impl SledKeySpace for FSMMeta {
     const PREFIX: u8 = 3;

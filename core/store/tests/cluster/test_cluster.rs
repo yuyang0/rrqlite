@@ -2,8 +2,7 @@ use std::time::Duration;
 
 use anyerror::AnyError;
 use core_command::command;
-use core_sled::init_temp_sled_db;
-use core_sled::openraft;
+use core_sled::{init_temp_sled_db, openraft};
 use core_store::config::{FSMConfig, RaftConfig, StoreConfig};
 use core_store::{RqliteNode, RqliteTypeConfig};
 use maplit::btreeset;
@@ -11,7 +10,8 @@ use openraft::error::NodeNotFound;
 
 /// 1. Open a temp sled::Db for all tests.
 /// 2. Initialize a global tracing.
-/// 3. Create a span for a test case. One needs to enter it by `span.enter()` and keeps the guard held.
+/// 3. Create a span for a test case. One needs to enter it by `span.enter()`
+/// and keeps the guard held.
 // #[macro_export]
 macro_rules! init_meta_ut {
     () => {{
@@ -31,9 +31,10 @@ macro_rules! init_meta_ut {
 /// Write to it and read from it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_cluster() -> anyhow::Result<()> {
-    // --- The client itself does not store addresses for all nodes, but just node id.
-    //     Thus we need a supporting component to provide mapping from node id to node address.
-    //     This is only used by the client. A raft node in this example stores node addresses in its store.
+    // --- The client itself does not store addresses for all nodes, but just node
+    // id.     Thus we need a supporting component to provide mapping from node
+    // id to node address.     This is only used by the client. A raft node in
+    // this example stores node addresses in its store.
 
     let (_log_guards, ut_span) = init_meta_ut!();
     let _ent = ut_span.enter();
@@ -338,7 +339,7 @@ async fn test_cluster() -> anyhow::Result<()> {
     let res = node3.query(qr.clone(), false).await?;
     check_record2(res);
 
-    //TODO consistent read
+    // TODO consistent read
     let exec_sql = "
         INSERT INTO contacts (contact_id, name, email) VALUES (3, 'Tom', 'tom@qq.com');
     ";

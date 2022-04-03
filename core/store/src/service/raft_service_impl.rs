@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use crate::protobuf::raft_service_server::RaftService;
-use crate::protobuf::RaftReply;
-use crate::protobuf::RaftRequest;
+use crate::protobuf::{RaftReply, RaftRequest};
 use crate::types::ForwardRequest;
 use crate::RqliteNode;
 

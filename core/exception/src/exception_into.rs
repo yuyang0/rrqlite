@@ -1,6 +1,4 @@
-use std::fmt::Debug;
-use std::fmt::Display;
-use std::fmt::Formatter;
+use std::fmt::{Debug, Display, Formatter};
 use std::sync::Arc;
 
 use backtrace::Backtrace;
@@ -112,8 +110,8 @@ impl From<prost::DecodeError> for ErrorCode {
 // // ===  octocrab error ===
 // impl From<octocrab::Error> for ErrorCode {
 //     fn from(error: octocrab::Error) -> Self {
-//         ErrorCode::NetworkRequestError(format!("octocrab error, cause: {}", error))
-//     }
+//         ErrorCode::NetworkRequestError(format!("octocrab error, cause: {}",
+// error))     }
 // }
 
 // ===  ser/de to/from tonic::Status ===

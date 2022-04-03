@@ -1,12 +1,10 @@
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use super::app_data::{AppRequest, AppResponse};
 use super::openraft::{Entry, NodeId};
-use crate::protobuf::RaftReply;
-use crate::protobuf::RaftRequest;
+use crate::protobuf::{RaftReply, RaftRequest};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum BackupFormat {
@@ -16,8 +14,8 @@ pub enum BackupFormat {
 
 #[derive(Error, Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum RetryableError {
-    /// Trying to write to a non-leader returns the latest leader the raft node knows,
-    /// to indicate the client to retry.
+    /// Trying to write to a non-leader returns the latest leader the raft node
+    /// knows, to indicate the client to retry.
     #[error("request must be forwarded to leader: {leader}")]
     ForwardToLeader { leader: NodeId },
 }
@@ -47,7 +45,8 @@ pub enum ForwardRequestBody {
 /// A request that is forwarded from one raft node to another
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ForwardRequest {
-    /// Forward the request to leader if the node received this request is not leader.
+    /// Forward the request to leader if the node received this request is not
+    /// leader.
     pub forward_to_leader: u64,
 
     pub body: ForwardRequestBody,

@@ -1,10 +1,24 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+use core_command::command;
+use core_sled::openraft;
+use core_sled::openraft::error::CheckIsLeaderError;
+use core_tracing::tracing_futures::Instrument;
+use openraft::{Config, SnapshotPolicy};
+use tokio::sync::{watch, Mutex, RwLock};
+use tokio::task::JoinHandle;
+use tonic::Status;
 
 use crate::config::{RaftConfig, StoreConfig};
 use crate::errors::{APIError, RaftError, StoreError, StoreResult};
 use crate::fsm::{SQLFsm, FSM};
+use crate::network::AppNetwork;
 use crate::protobuf::raft_service_client::RaftServiceClient;
+use crate::protobuf::raft_service_server::RaftServiceServer;
+use crate::protobuf::RaftReply;
+use crate::service::RaftServiceImpl;
 use crate::store::SledRaftStore;
 use crate::types::openraft::{
     ClientWriteError, ClientWriteRequest, EntryPayload, ForwardToLeader, Node, NodeId, RaftMetrics,
@@ -13,23 +27,10 @@ use crate::types::{
     AppRequest, AppResponse, BackupFormat, ForwardRequest, ForwardRequestBody, ForwardResponse,
     JoinRequest, RemoveNodeRequest,
 };
-use core_sled::openraft;
-use openraft::{Config, SnapshotPolicy};
-
-use crate::network::AppNetwork;
-use crate::protobuf::raft_service_server::RaftServiceServer;
-use crate::protobuf::RaftReply;
-use crate::service::RaftServiceImpl;
 use crate::RqliteRaft;
-use core_command::command;
-use core_sled::openraft::error::CheckIsLeaderError;
-use core_tracing::tracing_futures::Instrument;
-use std::time::{Duration, Instant};
-use tokio::sync::{watch, Mutex, RwLock};
-use tokio::task::JoinHandle;
-use tonic::Status;
 
-// RqliteNode is the container of meta data related components and threads, such as storage, the raft node and a raft-state monitor.
+// RqliteNode is the container of meta data related components and threads, such
+// as storage, the raft node and a raft-state monitor.
 pub struct RqliteNode {
     cfg: StoreConfig,
     fsm: Arc<SQLFsm>,
@@ -117,9 +118,11 @@ impl RqliteNode {
     /// Optionally boot a single node cluster.
     /// 1. If `open` is `Some`, try to open an existent one.
     /// 2. If `create` is `Some`, try to create an one in non-voter mode.
-    /// 3. If `init_cluster` is `Some` and it is just created, try to initialize a single-node cluster.
+    /// 3. If `init_cluster` is `Some` and it is just created, try to initialize
+    /// a single-node cluster.
     ///
-    /// TODO(xp): `init_cluster`: pass in a Map<id, address> to initialize the cluster.
+    /// TODO(xp): `init_cluster`: pass in a Map<id, address> to initialize the
+    /// cluster.
     #[tracing::instrument(level = "debug", skip(config), fields(config_id=config.raft.config_id.as_str()))]
     pub async fn open_create_boot(
         config: &StoreConfig,
@@ -133,7 +136,8 @@ impl RqliteNode {
         // Always disable fsync on mac.
         // Because there are some integration tests running on mac VM.
         //
-        // On mac File::sync_all() takes 10 ms ~ 30 ms, 500 ms at worst, which very likely to fail a test.
+        // On mac File::sync_all() takes 10 ms ~ 30 ms, 500 ms at worst, which very
+        // likely to fail a test.
         if cfg!(target_os = "macos") {
             tracing::warn!("Disabled fsync for meta data tests. fsync on mac is quite slow");
             config.raft.no_sync = true;
@@ -225,7 +229,7 @@ impl RqliteNode {
     // spawn a monitor to watch raft state changes such as leader changes,
     // and manually add non-voter to cluster so that non-voter receives raft logs.
     pub async fn subscribe_metrics(mn: Arc<Self>, mut metrics_rx: watch::Receiver<RaftMetrics>) {
-        //TODO: return a handle for join
+        // TODO: return a handle for join
         // TODO: every state change triggers add_non_voter!!!
         let mut running_rx = mn.running_rx.clone();
         let mut jh = mn.join_handles.lock().await;
@@ -295,7 +299,8 @@ impl RqliteNode {
         }
 
         // Try to join a cluster only when this node is just created.
-        // Joining a node with log has risk messing up the data in this node and in the target cluster.
+        // Joining a node with log has risk messing up the data in this node and in the
+        // target cluster.
         if self.is_opened() {
             tracing::info!("has opened");
             return Ok(());
@@ -388,9 +393,11 @@ impl RqliteNode {
     /// For every cluster this func should be called exactly once.
     #[tracing::instrument(level = "debug", skip(config), fields(config_id=config.raft.config_id.as_str()))]
     pub async fn boot(config: &StoreConfig) -> StoreResult<Arc<Self>> {
-        // 1. Bring a node up as non voter, start the grpc service for raft communication.
-        // 2. Initialize itself as leader, because it is the only one in the new cluster.
-        // 3. Add itself to the cluster storage by committing an `add-node` log so that the cluster members(only this node) is persisted.
+        // 1. Bring a node up as non voter, start the grpc service for raft
+        // communication. 2. Initialize itself as leader, because it is the only
+        // one in the new cluster. 3. Add itself to the cluster storage by
+        // committing an `add-node` log so that the cluster members(only this
+        // node) is persisted.
 
         let node = Self::open_create_boot(config, None, Some(()), Some(vec![]), true).await?;
 
@@ -428,8 +435,9 @@ impl RqliteNode {
         Ok(())
     }
 
-    /// When a leader is established, it is the leader's responsibility to setup replication from itself to non-voters, AKA learners.
-    /// openraft does not persist the node set of non-voters, thus we need to do it manually.
+    /// When a leader is established, it is the leader's responsibility to setup
+    /// replication from itself to non-voters, AKA learners. openraft does
+    /// not persist the node set of non-voters, thus we need to do it manually.
     /// This fn should be called once a node found it becomes leader.
     #[tracing::instrument(level = "debug", skip(self))]
     pub async fn add_configured_non_voters(&self) -> StoreResult<()> {
@@ -461,7 +469,7 @@ impl RqliteNode {
         req: T,
         redirect: bool,
     ) -> StoreResult<Option<ForwardResponse>> {
-        //check leader
+        // check leader
         if let Err(e) = self.raft.is_leader().await {
             match e {
                 CheckIsLeaderError::ForwardToLeader(info) => {
@@ -486,7 +494,7 @@ impl RqliteNode {
         er: command::ExecuteRequest,
         redirect: bool,
     ) -> StoreResult<command::ExecuteResult> {
-        //check leader
+        // check leader
         let resp = self.redirect_if_needed(&er, redirect).await?;
         if let Some(forward_resp) = resp {
             match forward_resp {
@@ -510,9 +518,10 @@ impl RqliteNode {
     }
 
     // Query the database, the meaning of level:
-    // Strong: auto forward the request to leader if current node is follower, and the leader will use RAFT alog to query the database.
-    // Weak: auto forward request to leader if current node is follower and the leader will query the local SQLite directly.
-    // None: just query the local SQLite directly.
+    // Strong: auto forward the request to leader if current node is follower, and
+    // the leader will use RAFT alog to query the database. Weak: auto forward
+    // request to leader if current node is follower and the leader will
+    // query the local SQLite directly. None: just query the local SQLite directly.
     pub async fn query(
         &self,
         qr: command::QueryRequest,
@@ -522,7 +531,7 @@ impl RqliteNode {
             .ok_or(APIError::Query(format!("invalid query level {}", qr.level)))?;
         match level {
             command::query_request::Level::QueryRequestLevelStrong => {
-                //check leader
+                // check leader
                 let resp = self.redirect_if_needed(&qr, redirect).await?;
                 if let Some(forward_resp) = resp {
                     match forward_resp {
@@ -556,7 +565,8 @@ impl RqliteNode {
                     .is_leader()
                     .await
                     .map_err(|e| APIError::NotLeader(format!("Not a leader {}", e)))?;
-                //TODO after remove rwlock in FSM, here we need to acquire read lock when req.transaction is true.
+                // TODO after remove rwlock in FSM, here we need to acquire read lock when
+                // req.transaction is true.
                 let res = self.state_machine().query(&qr).await?;
                 Ok(res)
             }
@@ -568,7 +578,8 @@ impl RqliteNode {
                     return Err(APIError::StaleRead(String::from("")).into());
                 }
 
-                //TODO after remove rwlock in FSM, here we need to acquire read lock when req.transaction is true.
+                // TODO after remove rwlock in FSM, here we need to acquire read lock when
+                // req.transaction is true.
                 let res = self.state_machine().query(&qr).await?;
                 Ok(res)
             }
@@ -688,7 +699,8 @@ impl RqliteNode {
     }
 
     /// Try to get the leader from the latest metrics of the local raft node.
-    /// If leader is absent, wait for an metrics update in which a leader is set.
+    /// If leader is absent, wait for an metrics update in which a leader is
+    /// set.
     #[tracing::instrument(level = "debug", skip(self))]
     pub async fn get_leader(&self) -> NodeId {
         // fast path: there is a known leader
@@ -785,7 +797,7 @@ impl RqliteNode {
         }
         Err(ForwardToLeader {
             leader_id: Some(curr_leader),
-            //TODO: add address information
+            // TODO: add address information
             leader_node: Default::default(),
         })
     }
@@ -826,7 +838,8 @@ impl<'a> AppLeader<'a> {
         // TODO(xp): deal with joint config
         assert!(membership.get(1).is_none());
 
-        // safe unwrap: if the first config is None, panic is the expected behavior here.
+        // safe unwrap: if the first config is None, panic is the expected behavior
+        // here.
         let mut membership = membership.get(0).unwrap().clone();
 
         if membership.contains(&req.node_id) {
@@ -849,7 +862,8 @@ impl<'a> AppLeader<'a> {
         // TODO(xp): deal with joint config
         assert!(membership.get(1).is_none());
 
-        // safe unwrap: if the first config is None, panic is the expected behavior here.
+        // safe unwrap: if the first config is None, panic is the expected behavior
+        // here.
         let mut membership = membership.get(0).unwrap().clone();
 
         membership.remove(&node_id);
@@ -859,11 +873,13 @@ impl<'a> AppLeader<'a> {
         self.change_membership(membership).await
     }
 
-    /// Write a log through local raft node and return the states before and after applying the log.
+    /// Write a log through local raft node and return the states before and
+    /// after applying the log.
     ///
-    /// If the raft node is not a leader, it returns MetaRaftError::ForwardToLeader.
-    /// If the leadership is lost during writing the log, it returns an UnknownError.
-    /// TODO(xp): elaborate the UnknownError, e.g. LeaderLostError
+    /// If the raft node is not a leader, it returns
+    /// MetaRaftError::ForwardToLeader. If the leadership is lost during
+    /// writing the log, it returns an UnknownError. TODO(xp): elaborate the
+    /// UnknownError, e.g. LeaderLostError
     #[tracing::instrument(level = "debug", skip(self))]
     pub async fn write(&self, app_req: AppRequest) -> StoreResult<AppResponse> {
         let write_rst = self

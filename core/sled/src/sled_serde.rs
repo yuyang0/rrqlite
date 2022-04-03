@@ -13,18 +13,16 @@
 // limitations under the License.
 
 use std::mem::size_of_val;
-use std::ops::Bound;
-use std::ops::RangeBounds;
+use std::ops::{Bound, RangeBounds};
 
-use crate::errors::SledStorageError;
-use byteorder::BigEndian;
-use byteorder::ByteOrder;
+use byteorder::{BigEndian, ByteOrder};
 use openraft::raft::Entry;
 use openraft::RaftTypeConfig;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sled::IVec;
 
+use crate::errors::SledStorageError;
 use crate::SledValueToKey;
 
 /// Serialize/deserialize(ser/de) to/from sled values.
@@ -45,13 +43,15 @@ pub trait SledSerde: Serialize + DeserializeOwned {
     }
 }
 
-/// Serialize/deserialize(ser/de) to/from sled values and keeps order after serializing.
+/// Serialize/deserialize(ser/de) to/from sled values and keeps order after
+/// serializing.
 ///
 /// E.g. serde_json does not preserve the order of u64:
 /// 9 -> [57], 10 -> [49, 48]
 /// While BigEndian encoding preserve the order.
 ///
-/// A type that is used as a sled db key should be serialized with order preserved, such as log index.
+/// A type that is used as a sled db key should be serialized with order
+/// preserved, such as log index.
 pub trait SledOrderedSerde: Serialize + DeserializeOwned {
     /// (ser)ialize a value to `sled::IVec`.
     fn ser(&self) -> Result<IVec, SledStorageError>;
@@ -63,7 +63,8 @@ pub trait SledOrderedSerde: Serialize + DeserializeOwned {
 }
 
 /// Serialize/deserialize(ser/de) to/from range to sled IVec range.
-/// The type must impl SledOrderedSerde so that after serialization the order is preserved.
+/// The type must impl SledOrderedSerde so that after serialization the order is
+/// preserved.
 pub trait SledRangeSerde<SD, V, R>
 where
     SD: SledOrderedSerde,
@@ -115,7 +116,8 @@ where
     }
 }
 
-/// NodeId, LogIndex and Term need to be serialized with order preserved, for listing items.
+/// NodeId, LogIndex and Term need to be serialized with order preserved, for
+/// listing items.
 impl SledOrderedSerde for u64 {
     fn ser(&self) -> Result<IVec, SledStorageError> {
         let size = size_of_val(self);

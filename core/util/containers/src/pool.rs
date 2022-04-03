@@ -16,8 +16,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -38,7 +37,8 @@ pub trait ItemManager {
 
     /// Make a new item to put into the pool.
     ///
-    /// An impl should hold that an item returned by `build()` is passed `check()`.
+    /// An impl should hold that an item returned by `build()` is passed
+    /// `check()`.
     async fn build(&self, key: &Self::Key) -> Result<Self::Item, Self::Error>;
 
     /// Check if an existent item still valid.
@@ -49,7 +49,8 @@ pub trait ItemManager {
     async fn check(&self, item: Self::Item) -> Result<Self::Item, Self::Error>;
 }
 
-/// Pool assumes the items in it is `Clone`, thus it keeps only one item for each key.
+/// Pool assumes the items in it is `Clone`, thus it keeps only one item for
+/// each key.
 #[allow(clippy::type_complexity)]
 pub struct Pool<Mgr>
 where
@@ -86,7 +87,8 @@ where
     /// Return an raw pool item.
     ///
     /// The returned one may be an uninitialized one, i.e., it contains a None.
-    /// The lock for `items` should not be held for long, e.g. when `build()` a new connection, it takes dozen ms.
+    /// The lock for `items` should not be held for long, e.g. when `build()` a
+    /// new connection, it takes dozen ms.
     fn get_pool_item(&self, key: &Mgr::Key) -> PoolItem<Mgr::Item> {
         let mut items = self.items.lock().unwrap();
 
@@ -101,8 +103,8 @@ where
 
     /// Return a item, by cloning an existent one or making a new one.
     ///
-    /// When returning an existent one, `check()` will be called on it to ensure it is still valid.
-    /// E.g., when returning a tcp connection.
+    /// When returning an existent one, `check()` will be called on it to ensure
+    /// it is still valid. E.g., when returning a tcp connection.
     pub async fn get(&self, key: &Mgr::Key) -> Result<Mgr::Item, Mgr::Error> {
         let pool_item = self.get_pool_item(key);
 

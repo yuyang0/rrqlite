@@ -14,12 +14,12 @@
 
 use std::fmt;
 
-use crate::types::openraft::{EffectiveMembership, LogId, NodeId, Vote};
 use anyerror::AnyError;
 use core_sled::{sled, SledOrderedSerde, SledStorageError};
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sled::IVec;
+
+use crate::types::openraft::{EffectiveMembership, LogId, NodeId, Vote};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum LogMetaKey {

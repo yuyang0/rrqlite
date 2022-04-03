@@ -13,15 +13,15 @@
 // limitations under the License.
 
 use opentelemetry::global;
-use opentelemetry::propagation::Extractor;
-use opentelemetry::propagation::Injector;
+use opentelemetry::propagation::{Extractor, Injector};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 /// Inject tracing info into tonic request meta.
 struct MetadataMapInjector<'a>(&'a mut tonic::metadata::MetadataMap);
 
 impl<'a> Injector for MetadataMapInjector<'a> {
-    /// Set a key and value in the MetadataMap.  Does nothing if the key or value are not valid inputs
+    /// Set a key and value in the MetadataMap.  Does nothing if the key or
+    /// value are not valid inputs
     fn set(&mut self, key: &str, value: String) {
         if let Ok(key) = tonic::metadata::MetadataKey::from_bytes(key.as_bytes()) {
             if let Ok(val) = tonic::metadata::MetadataValue::from_str(&value) {
@@ -35,7 +35,8 @@ impl<'a> Injector for MetadataMapInjector<'a> {
 struct MetadataMapExtractor<'a>(&'a tonic::metadata::MetadataMap);
 
 impl<'a> Extractor for MetadataMapExtractor<'a> {
-    /// Get a value for a key from the MetadataMap.  If the value can't be converted to &str, returns None
+    /// Get a value for a key from the MetadataMap.  If the value can't be
+    /// converted to &str, returns None
     fn get(&self, key: &str) -> Option<&str> {
         self.0.get(key).and_then(|metadata| metadata.to_str().ok())
     }
@@ -56,7 +57,8 @@ impl<'a> Extractor for MetadataMapExtractor<'a> {
 /// before sending request to a tonic server.
 /// Then the tonic server will be able to chain a distributed tracing.
 ///
-/// A tonic client should call this function just before sending out the request.
+/// A tonic client should call this function just before sending out the
+/// request.
 ///
 /// The global propagater must be installed, e.g. by calling: TODO
 pub fn inject_span_to_tonic_request<T>(mes: impl tonic::IntoRequest<T>) -> tonic::Request<T> {

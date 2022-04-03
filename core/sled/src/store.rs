@@ -25,5 +25,6 @@ pub trait Store<KV: SledKeySpace> {
     fn remove(&self, key: &KV::K) -> Result<Option<KV::V>, Self::Error>;
 
     fn update_and_fetch<F>(&self, key: &KV::K, f: F) -> Result<Option<KV::V>, Self::Error>
-    where F: FnMut(Option<KV::V>) -> Option<KV::V>;
+    where
+        F: FnMut(Option<KV::V>) -> Option<KV::V>;
 }

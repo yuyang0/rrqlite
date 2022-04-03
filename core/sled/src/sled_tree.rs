@@ -14,18 +14,13 @@
 
 use std::fmt::Display;
 use std::marker::PhantomData;
-use std::ops::Bound;
-use std::ops::Deref;
-use std::ops::RangeBounds;
+use std::ops::{Bound, Deref, RangeBounds};
+
+use core_tracing::tracing;
+use sled::transaction::{ConflictableTransactionError, TransactionResult, TransactionalTree};
 
 use crate::error_context::WithContext;
-use crate::errors::SledStorageError;
-use crate::errors::SledStorageResult;
-use core_tracing::tracing;
-use sled::transaction::ConflictableTransactionError;
-use sled::transaction::TransactionResult;
-use sled::transaction::TransactionalTree;
-
+use crate::errors::{SledStorageError, SledStorageResult};
 use crate::sled::transaction::TransactionError;
 use crate::store::Store;
 use crate::SledKeySpace;
@@ -35,11 +30,12 @@ pub trait SledValueToKey<K> {
     fn to_key(&self) -> K;
 }
 
-/// SledTree is a wrapper of sled::Tree that provides access of more than one key-value
-/// types.
+/// SledTree is a wrapper of sled::Tree that provides access of more than one
+/// key-value types.
 /// A `SledKVType` defines a key-value type to be stored.
-/// The key type `K` must be serializable with order preserved, i.e. impl trait `SledOrderedSerde`.
-/// The value type `V` can be any serialize impl, i.e. for most cases, to impl trait `SledSerde`.
+/// The key type `K` must be serializable with order preserved, i.e. impl trait
+/// `SledOrderedSerde`. The value type `V` can be any serialize impl, i.e. for
+/// most cases, to impl trait `SledSerde`.
 #[derive(Debug, Clone)]
 pub struct SledTree {
     pub name: String,
@@ -81,7 +77,8 @@ impl SledTree {
         Ok(rl)
     }
 
-    /// Borrows the SledTree and creates a wrapper with access limited to a specified key space `KV`.
+    /// Borrows the SledTree and creates a wrapper with access limited to a
+    /// specified key space `KV`.
     pub fn key_space<KV: SledKeySpace>(&self) -> AsKeySpace<KV> {
         AsKeySpace::<KV> {
             inner: self,
@@ -438,7 +435,8 @@ impl SledTree {
     }
 
     /// Append many values into SledTree.
-    /// This could be used in cases the key is included in value and a value should impl trait `IntoKey` to retrieve the key from a value.
+    /// This could be used in cases the key is included in value and a value
+    /// should impl trait `IntoKey` to retrieve the key from a value.
     #[tracing::instrument(level = "debug", skip(self, values))]
     pub async fn append_values<KV>(&self, values: &[KV::V]) -> SledStorageResult<()>
     where
@@ -541,7 +539,8 @@ impl TransactionSledTree<'_> {
     }
 }
 
-/// It borrows the internal SledTree with access limited to a specified namespace `KV`.
+/// It borrows the internal SledTree with access limited to a specified
+/// namespace `KV`.
 pub struct AsKeySpace<'a, KV: SledKeySpace> {
     inner: &'a SledTree,
     phantom: PhantomData<KV>,
@@ -611,17 +610,14 @@ impl<'a, KV: SledKeySpace> Store<KV> for AsTxnKeySpace<'a, KV> {
 }
 
 /// Some methods that take `&TransactionSledTree` as parameter need to be called
-/// in subTree method, since subTree(aka: AsTxnKeySpace) already ref to `TransactionSledTree`
-/// we impl deref here to fetch inner `&TransactionSledTree`.
-/// # Example:
+/// in subTree method, since subTree(aka: AsTxnKeySpace) already ref to
+/// `TransactionSledTree` we impl deref here to fetch inner
+/// `&TransactionSledTree`. # Example:
 ///
 /// ```
 /// fn txn_incr_seq(&self, key: &str, txn_tree: &TransactionSledTree) {}
 ///
-/// fn sub_txn_tree_do_update<'s, KS>(
-///     &'s self,
-///     sub_tree: &AsTxnKeySpace<'s, KS>,
-/// ) {
+/// fn sub_txn_tree_do_update<'s, KS>(&'s self, sub_tree: &AsTxnKeySpace<'s, KS>) {
 ///     seq_kv_value.seq = self.txn_incr_seq(KS::NAME, &*sub_tree);
 ///     sub_tree.insert(key, &seq_kv_value);
 /// }

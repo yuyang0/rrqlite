@@ -14,9 +14,7 @@
 
 #![allow(non_snake_case)]
 
-use std::fmt::Debug;
-use std::fmt::Display;
-use std::fmt::Formatter;
+use std::fmt::{Debug, Display, Formatter};
 use std::sync::Arc;
 
 use backtrace::Backtrace;
@@ -155,12 +153,10 @@ impl ErrorCode {
 /// Provides the `map_err_to_code` method for `Result`.
 ///
 /// ```
-/// use common_exception::ToErrorCode;
-/// use common_exception::ErrorCode;
+/// use core_exception::{ErrorCode, ToErrorCode};
 ///
 /// let x: std::result::Result<(), std::fmt::Error> = Err(std::fmt::Error {});
-/// let y: common_exception::Result<()> =
-///     x.map_err_to_code(ErrorCode::UnknownException, || 123);
+/// let y: core_exception::Result<()> = x.map_err_to_code(ErrorCode::UnknownException, || 123);
 ///
 /// assert_eq!(
 ///     "Code: 1067, displayText = 123, cause: an error occurred when formatting an argument.",
@@ -174,8 +170,8 @@ where
     /// Wrap the error value with ErrorCode. It is lazily evaluated:
     /// only when an error does occur.
     ///
-    /// `err_code_fn` is one of the ErrorCode builder function such as `ErrorCode::Ok`.
-    /// `context_fn` builds display_text for the ErrorCode.
+    /// `err_code_fn` is one of the ErrorCode builder function such as
+    /// `ErrorCode::Ok`. `context_fn` builds display_text for the ErrorCode.
     fn map_err_to_code<ErrFn, D>(self, err_code_fn: ErrFn, context_fn: CtxFn) -> Result<T>
     where
         ErrFn: FnOnce(String) -> ErrorCode,

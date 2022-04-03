@@ -1,8 +1,7 @@
 use core_exception::Result;
 use core_store::RqliteNode;
 use core_tracing::{init_global_tracing, tracing};
-use core_util_misc::StopHandle;
-use core_util_misc::Stoppable;
+use core_util_misc::{StopHandle, Stoppable};
 use rqlited::api::http;
 use rqlited::config::Config;
 

@@ -16,14 +16,10 @@ mod logging;
 mod panic_hook;
 mod tracing_to_jaeger;
 
-pub use logging::init_default_ut_tracing;
-pub use logging::init_global_tracing;
-pub use logging::init_meta_ut_tracing;
+pub use logging::{init_default_ut_tracing, init_global_tracing, init_meta_ut_tracing};
 pub use panic_hook::set_panic_hook;
-pub use tracing;
-pub use tracing_futures;
-pub use tracing_to_jaeger::extract_remote_span_as_parent;
-pub use tracing_to_jaeger::inject_span_to_tonic_request;
+pub use tracing_to_jaeger::{extract_remote_span_as_parent, inject_span_to_tonic_request};
+pub use {tracing, tracing_futures};
 
 #[macro_export]
 macro_rules! func_name {

@@ -1,20 +1,20 @@
-use crate::config::Config;
-use actix_server::Server as ActixServer;
-use actix_server::ServerHandle;
-use actix_web::{web, App, HttpServer};
+use std::sync::Arc;
 
+use actix_server::{Server as ActixServer, ServerHandle};
+use actix_web::{web, App, HttpServer};
 use core_exception::Result;
-use core_tracing::tracing;
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
-use tracing_actix_web::TracingLogger;
-// use serde::{Deserialize, Serialize};
-use super::service;
 use core_store::RqliteNode;
+use core_tracing::tracing;
 use core_util_misc::Stoppable;
 use futures::future::Either;
-use std::sync::Arc;
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
+use tracing_actix_web::TracingLogger;
+
+// use serde::{Deserialize, Serialize};
+use super::service;
+use crate::config::Config;
 
 pub struct Server {
     name: String,
@@ -88,7 +88,8 @@ impl Stoppable for Server {
     ///
     /// In case a graceful `stop()` had blocked for too long,
     /// the caller submit a FORCE stop by sending a `()` to `force`.
-    /// An impl should either close everything at once, or just ignore the `force` signal if it does not support force stop.
+    /// An impl should either close everything at once, or just ignore the
+    /// `force` signal if it does not support force stop.
     ///
     /// Calling `stop()` twice should get an error.
     async fn stop(&mut self, mut force: Option<broadcast::Receiver<()>>) -> Result<()> {

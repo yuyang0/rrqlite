@@ -15,22 +15,13 @@
 //! sled_store implement a key-value like store backed by sled::Tree.
 //!
 //! It is used by raft for log and state machine storage.
-pub use db::get_sled_db;
-pub use db::init_sled_db;
-pub use db::init_temp_sled_db;
+pub use db::{get_sled_db, init_sled_db, init_temp_sled_db};
 pub use errors::{SledStorageError, SledStorageResult};
-pub use openraft;
-pub use sled;
 pub use sled_key_space::SledKeySpace;
-pub use sled_serde::SledOrderedSerde;
-pub use sled_serde::SledRangeSerde;
-pub use sled_serde::SledSerde;
-pub use sled_tree::AsKeySpace;
-pub use sled_tree::AsTxnKeySpace;
-pub use sled_tree::SledTree;
-pub use sled_tree::SledValueToKey;
-pub use sled_tree::TransactionSledTree;
+pub use sled_serde::{SledOrderedSerde, SledRangeSerde, SledSerde};
+pub use sled_tree::{AsKeySpace, AsTxnKeySpace, SledTree, SledValueToKey, TransactionSledTree};
 pub use store::Store;
+pub use {openraft, sled};
 
 mod db;
 mod error_context;

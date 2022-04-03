@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::errors::StoreError;
 use anyerror::AnyError;
 
+use crate::errors::StoreError;
 use crate::types::openraft::{ErrorSubject, ErrorVerb, StorageError, StorageIOError};
 
 /// Convert MetaStorageError to openraft::StorageError;  

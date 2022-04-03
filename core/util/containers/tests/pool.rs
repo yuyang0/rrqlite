@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use async_trait::async_trait;
 use core_tracing::tracing;
-use core_util_containers::ItemManager;
-use core_util_containers::Pool;
+use core_util_containers::{ItemManager, Pool};
 pub struct GlobalSequence;
 
 impl GlobalSequence {

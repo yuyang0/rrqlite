@@ -1,4 +1,5 @@
-use rand::{distributions::Alphanumeric, Rng}; // 0.8
+use rand::distributions::Alphanumeric;
+use rand::Rng; // 0.8
 
 pub fn thread_rand_string(length: usize) -> String {
     let s: String = rand::thread_rng()

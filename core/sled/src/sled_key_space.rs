@@ -12,24 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! sled_key_space defines several key-value types to be used in sled::Tree, as an raft storage impl.
+//! sled_key_space defines several key-value types to be used in sled::Tree, as
+//! an raft storage impl.
 
-use std::fmt::Debug;
-use std::fmt::Display;
-use std::ops::Bound;
-use std::ops::RangeBounds;
+use std::fmt::{Debug, Display};
+use std::ops::{Bound, RangeBounds};
 
-use crate::errors::SledStorageError;
 use anyerror::AnyError;
 use sled::IVec;
 
-use crate::SledOrderedSerde;
-use crate::SledSerde;
+use crate::errors::SledStorageError;
+use crate::{SledOrderedSerde, SledSerde};
 
 /// Defines a key space in sled::Tree that has its own key value type.
-/// And a prefix that is used to distinguish keys from different spaces in a SledTree.
+/// And a prefix that is used to distinguish keys from different spaces in a
+/// SledTree.
 pub trait SledKeySpace {
-    /// Prefix is a unique u8 that is prepended before the serialized key, to identify a namespace in sled::Tree.
+    /// Prefix is a unique u8 that is prepended before the serialized key, to
+    /// identify a namespace in sled::Tree.
     const PREFIX: u8;
 
     /// The for human name of this key-value type.
@@ -85,9 +85,10 @@ pub trait SledKeySpace {
     }
 
     /// Convert user key range bound to sled::IVec bound.
-    /// A u8 prefix is prepended to the bound value and an open bound is converted to a namespaced bound.
-    /// E.g., use the [PREFIX] as the left side closed bound,
-    /// and use the [PREFIX+1] as the right side open bound.
+    /// A u8 prefix is prepended to the bound value and an open bound is
+    /// converted to a namespaced bound. E.g., use the [PREFIX] as the left
+    /// side closed bound, and use the [PREFIX+1] as the right side open
+    /// bound.
     fn serialize_bound(
         v: Bound<&Self::K>,
         dir: &str,

@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::errors::StoreError;
-use crate::errors::StoreResult;
-use crate::types::openraft::NodeId;
 use clap::Parser;
 use once_cell::sync::Lazy;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+use crate::errors::{StoreError, StoreResult};
+use crate::types::openraft::NodeId;
 
 pub static DATABEND_COMMIT_VERSION: Lazy<String> = Lazy::new(|| {
     let build_semver = option_env!("VERGEN_BUILD_SEMVER");
@@ -90,7 +89,8 @@ pub struct NodeConfig {}
 #[serde(default)]
 pub struct RaftConfig {
     /// Identify a config.
-    /// This is only meant to make debugging easier with more than one Config involved.
+    /// This is only meant to make debugging easier with more than one Config
+    /// involved.
     #[clap(long, default_value = "")]
     pub config_id: String,
 
@@ -120,7 +120,8 @@ pub struct RaftConfig {
 
     /// Bring up a metasrv node and join a cluster.
     ///
-    /// The value is one or more addresses of a node in the cluster, to which this node sends a `join` request.
+    /// The value is one or more addresses of a node in the cluster, to which
+    /// this node sends a `join` request.
     #[clap(
         long = "join",
         env = "RQLITED_JOIN",
@@ -203,7 +204,8 @@ pub struct RaftConfig {
     // // it improves the database write performance under normal operation, but requires
     // // a full database re-sync during recovery.
     // RaftNoFreelistSync bool
-    /// The max time in seconds that a leader wait for install-snapshot ack from a follower or non-voter.
+    /// The max time in seconds that a leader wait for install-snapshot ack from
+    /// a follower or non-voter.
     #[clap(long, env = "RAFT_INSTALL_SNAPSHOT_TIMEOUT", default_value = "4")]
     pub install_snapshot_timeout: u64,
 
@@ -217,14 +219,15 @@ pub struct RaftConfig {
     #[clap(long, env = "RQLITED_ID", default_value = "0")]
     pub id: NodeId,
 
-    /// Whether to fsync meta to disk for every meta write(raft log, state machine etc).
-    /// No-sync brings risks of data loss during a crash.
-    /// You should only use this in a testing environment, unless YOU KNOW WHAT YOU ARE DOING.
+    /// Whether to fsync meta to disk for every meta write(raft log, state
+    /// machine etc). No-sync brings risks of data loss during a crash.
+    /// You should only use this in a testing environment, unless YOU KNOW WHAT
+    /// YOU ARE DOING.
     #[clap(long, env = "RQLITED_NO_SYNC")]
     pub no_sync: bool,
 
-    /// Single node metasrv. It creates a single node cluster if meta data is not initialized.
-    /// Otherwise it opens the previous one.
+    /// Single node metasrv. It creates a single node cluster if meta data is
+    /// not initialized. Otherwise it opens the previous one.
     /// This is mainly for testing purpose.
     #[clap(long, env = "RQLITED_SINGLE")]
     pub single: bool,
@@ -281,9 +284,9 @@ impl RaftConfig {
 // }
 
 impl RaftConfig {
-    /// StructOptToml provides a default Default impl that loads config from cli args,
-    /// which conflicts with unit test if case-filter arguments passed, e.g.:
-    /// `cargo test my_unit_test_fn`
+    /// StructOptToml provides a default Default impl that loads config from cli
+    /// args, which conflicts with unit test if case-filter arguments
+    /// passed, e.g.: `cargo test my_unit_test_fn`
     ///
     /// Thus we need another method to generate an empty default instance.
     pub fn empty() -> Self {
@@ -310,8 +313,9 @@ impl RaftConfig {
     }
 
     /// Create a unique sled::Tree name by prepending a unique prefix.
-    /// So that multiple instance that depends on a sled::Tree can be used in one process.
-    /// sled does not allow to open multiple `sled::Db` in one process.
+    /// So that multiple instance that depends on a sled::Tree can be used in
+    /// one process. sled does not allow to open multiple `sled::Db` in one
+    /// process.
     pub fn tree_name(&self, name: impl std::fmt::Display) -> String {
         format!("{}{}", self.sled_tree_prefix, name)
     }

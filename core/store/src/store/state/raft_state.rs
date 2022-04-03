@@ -12,26 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::errors::{StoreError, StoreResult};
-use crate::types::openraft::{NodeId, Vote};
 use core_sled::{sled, AsKeySpace, SledTree};
 use core_tracing::tracing;
 
 use crate::config::RaftConfig;
+use crate::errors::{StoreError, StoreResult};
 use crate::store::key_spaces::RaftStateKV;
 use crate::store::kv_types::{RaftStateKey, RaftStateValue};
+use crate::types::openraft::{NodeId, Vote};
 
-/// Raft state stores everything else other than log and state machine, which includes:
-/// id: NodeId,
+/// Raft state stores everything else other than log and state machine, which
+/// includes: id: NodeId,
 /// hard_state:
 ///      current_term,
 ///      voted_for,
-///
 #[derive(Debug)]
 pub struct RaftState {
     pub id: NodeId,
 
-    /// If the instance is opened(true) from an existent state(e.g. load from disk) or created(false).
+    /// If the instance is opened(true) from an existent state(e.g. load from
+    /// disk) or created(false).
     is_open: bool,
 
     /// A sled tree with key space support.
@@ -48,9 +48,10 @@ impl RaftState {
 
 impl RaftState {
     /// Open/create a raft state in a sled db.
-    /// 1. If `open` is `Some`,  it tries to open an existent RaftState if there is one.
-    /// 2. If `create` is `Some`, it tries to initialize a new RaftState if there is not one.
-    /// If none of them is `Some`, it is a programming error and will panic.
+    /// 1. If `open` is `Some`,  it tries to open an existent RaftState if there
+    /// is one. 2. If `create` is `Some`, it tries to initialize a new
+    /// RaftState if there is not one. If none of them is `Some`, it is a
+    /// programming error and will panic.
     #[tracing::instrument(level = "debug", skip(db,config,open,create), fields(config_id=%config.config_id))]
     pub async fn open_create(
         db: &sled::Db,

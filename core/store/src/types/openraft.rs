@@ -1,8 +1,8 @@
+use core_sled::openraft;
+pub use openraft::Node;
+
 use crate::protobuf::RaftRequest;
 use crate::RqliteTypeConfig;
-use core_sled::openraft;
-
-pub use openraft::Node;
 pub type LogIndex = u64;
 pub type Term = u64;
 pub type NodeId = u64;
@@ -18,8 +18,9 @@ pub type StorageError = openraft::StorageError<RqliteTypeConfig>;
 pub type ErrorSubject = openraft::ErrorSubject<RqliteTypeConfig>;
 pub type ErrorVerb = openraft::ErrorVerb;
 // pub type RaftLogReader = openraft::RaftLogReader<RqliteTypeConfig>;
-// pub type RaftSnapshotBuilder<SD> = openraft::RaftSnapshotBuilder<RqliteTypeConfig, SD>;
-// pub type RaftStorage = openraft::RaftStorage<RqliteTypeConfig>;
+// pub type RaftSnapshotBuilder<SD> =
+// openraft::RaftSnapshotBuilder<RqliteTypeConfig, SD>; pub type RaftStorage =
+// openraft::RaftStorage<RqliteTypeConfig>;
 pub type SnapshotMeta = openraft::SnapshotMeta<RqliteTypeConfig>;
 pub type StorageIOError = openraft::StorageIOError<RqliteTypeConfig>;
 pub type Vote = openraft::Vote<RqliteTypeConfig>;

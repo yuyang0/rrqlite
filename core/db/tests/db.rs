@@ -1,5 +1,6 @@
 use bytes::BufMut;
-use core_command::command::{self, QueryResult};
+use core_command::command;
+use core_command::command::QueryResult;
 use core_db::db::{Context, DB};
 use core_db::error::Result;
 
