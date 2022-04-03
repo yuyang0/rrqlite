@@ -1,4 +1,3 @@
-use anyerror;
 use thiserror::Error;
 
 // represent network related errors
@@ -10,8 +9,6 @@ pub enum DBError {
     ConnPoolError(#[from] r2d2::Error),
     #[error(transparent)]
     IOError(#[from] std::io::Error),
-    #[error(transparent)]
-    Other(anyerror::AnyError),
 }
 
 pub type Result<T> = std::result::Result<T, DBError>;

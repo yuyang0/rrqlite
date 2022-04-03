@@ -6,7 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyerror = "0.1.4"
 thiserror = "1.0.30"
 tempfile = "3.3"
 r2d2_sqlite = "0.19"
