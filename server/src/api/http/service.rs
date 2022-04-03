@@ -91,16 +91,50 @@ async fn handle_db_execute(
 }
 
 // allow GET, POST
+#[get("/db/query")]
+async fn handle_db_query_get(
+    _req: HttpRequest,
+    node: web::Data<Arc<RqliteNode>>,
+) -> impl Responder {
+    let query_str = _req.query_string();
+    let qs = QString::from(query_str);
+    let stmt = match qs.get("q") {
+        Some(s) => s,
+        None => return HttpResponse::BadRequest().body("need sql statment"),
+    };
+    let stmts = vec![command::Statement {
+        sql: stmt.to_string(),
+        ..Default::default()
+    }];
+    handle_db_query(qs, stmts, node).await
+}
+
 #[post("/db/query")]
-async fn handle_db_query(
+async fn handle_db_query_post(
     _req: HttpRequest,
     req_body: String,
     node: web::Data<Arc<RqliteNode>>,
 ) -> impl Responder {
-    let stmts_opt = parse_sql_stmts(&req_body);
-    // extract query arguments
     let query_str = _req.query_string();
     let qs = QString::from(query_str);
+
+    let stmts = match parse_sql_stmts(&req_body) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::warn!("invalid query request {}", e);
+            let msg = HashMap::from([("error", format!("{}", e))]);
+            return HttpResponse::BadRequest().json(msg);
+        }
+    };
+    handle_db_query(qs, stmts, node).await
+}
+
+async fn handle_db_query(
+    qs: QString,
+    stmts: Vec<command::Statement>,
+    node: web::Data<Arc<RqliteNode>>,
+) -> HttpResponse {
+    // extract query arguments
     let is_txn = qs.get("transaction").is_some();
     let timings = qs.get("timings").is_some();
     let redirect = qs.get("redirect").is_some();
@@ -122,24 +156,14 @@ async fn handle_db_query(
         None => command::query_request::Level::QueryRequestLevelWeak,
     };
 
-    let qr = match stmts_opt {
-        Err(e) => {
-            tracing::warn!("invalid query request {}", e);
-            let msg = HashMap::from([("error", format!("{}", e))]);
-            return HttpResponse::BadRequest().json(msg);
-        }
-        Ok(stmts) => {
-            let qr = command::QueryRequest {
-                request: Some(command::Request {
-                    transaction: is_txn,
-                    statements: stmts,
-                }),
-                timings: timings,
-                freshness: freshness,
-                level: level.into(),
-            };
-            qr
-        }
+    let qr = command::QueryRequest {
+        request: Some(command::Request {
+            transaction: is_txn,
+            statements: stmts,
+        }),
+        timings: timings,
+        freshness: freshness,
+        level: level.into(),
     };
 
     let res = tokio::time::timeout(
