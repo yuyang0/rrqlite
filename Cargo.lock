@@ -263,12 +263,11 @@ dependencies = [
 
 [[package]]
 name = "anyerror"
-version = "0.1.4"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "356dad7a83da5d8abfc4f74df6c89910a3f530af6912155a9cab99f01e8972ef"
+checksum = "c3fcdccf28e08d90b98adc330fde2c08bdc5bca625b3611fd755e03c90bfe9ca"
 dependencies = [
  "anyhow",
- "backtrace",
  "serde",
 ]
 
@@ -542,13 +541,13 @@ dependencies = [
  "prost 0.7.0",
  "prost-build 0.7.0",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
 name = "core-db"
 version = "0.1.0"
 dependencies = [
- "anyerror",
  "bytes",
  "core-command",
  "core-tracing",
