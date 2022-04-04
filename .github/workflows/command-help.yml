@@ -1,0 +1,16 @@
+name: help-command
+on:
+  repository_dispatch:
+    types: [help-command]
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: peter-evans/create-or-update-comment@v1
+        with:
+          issue-number: ${{ github.event.client_payload.github.payload.issue.number }}
+          body: |
+            Get help or engage by:
+
+            - `/help` : to print help messages.
+            - `/assignme` : to assign this issue to you.

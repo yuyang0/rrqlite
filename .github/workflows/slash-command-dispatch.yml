@@ -1,0 +1,129 @@
+name: Slash Command Dispatch
+on:
+  issue_comment:
+    # Type "edited" added here for test purposes. Where possible, avoid 
+    # using to prevent processing unnecessary events.
+    types: [created, edited]
+jobs:
+  slashCommandDispatch:
+    runs-on: ubuntu-latest
+    steps:
+      # # Checkout is necessary here due to referencing a local action.
+      # # It's also necessary when using the 'config-from-file' option.
+      # # Otherwise, avoid using checkout to keep this workflow fast.
+      # - uses: actions/checkout@v3
+
+      # # Basic configuration
+      # - name: Slash Command Dispatch
+      #   uses: ./
+      #   with:
+      #     token: ${{ secrets.REPO_ACCESS_TOKEN }}
+      #     commands: |
+      #       hello-world-local
+      #       ping-local
+      #     permission: none
+      #     issue-type: issue
+
+      # Advanced JSON configuration
+      - name: Slash Command Dispatch (JSON)
+        id: scd
+        # uses: ./
+        uses: peter-evans/slash-command-dispatch@v3
+
+        with:
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          config: >
+            [
+              {
+                "command": "assignme",
+                "permission": "none",
+                "issue_type": "issue",
+                "repository": "yuyang0/rrqlite"
+              },
+              {
+                "command": "rebase",
+                "permission": "admin",
+                "repository": "yuyang0/rrqlite",
+                "issue_type": "pull-request"
+              },
+              {
+                "command": "help",
+                "permission": "none",
+                "issue_type": "issue",
+                "repository": "yuyang0/rrqlite"
+              },
+              {
+                "command": "help",
+                "permission": "none",
+                "issue_type": "pull-request",
+                "repository": "yuyang0/rrqlite",
+                "event_type_suffix": "-pr-command"
+              },
+              {
+                "command": "example",
+                "permission": "none",
+                "issue_type": "issue",
+                "repository": "yuyang0/rrqlite"
+              },
+              {
+                "command": "hello-world",
+                "permission": "none",
+                "issue_type": "issue",
+                "repository": "yuyang0/rrqlite"
+              },
+              {
+                "command": "hello-world",
+                "permission": "none",
+                "issue_type": "pull-request",
+                "repository": "yuyang0/rrqlite",
+                "event_type_suffix": "-pr-command"
+              },
+              {
+                "command": "hello-workflow",
+                "permission": "none",
+                "issue_type": "issue",
+                "repository": "yuyang0/rrqlite",
+                "static_args": [
+                  "repository=${{ github.repository }}",
+                  "comment-id=${{ github.event.comment.id }}",
+                  "issue-number=${{ github.event.issue.number }}",
+                  "actor=${{ github.actor }}"
+                ],
+                "dispatch_type": "workflow"
+              },
+              {
+                "command": "ping",
+                "permission": "none",
+                "issue_type": "issue",
+                "repository": "yuyang0/rrqlite"
+              },
+              {
+                "command": "black",
+                "permission": "none",
+                "issue_type": "pull-request",
+                "repository": "yuyang0/rrqlite"
+              },
+              {
+                "command": "reset-demo",
+                "permission": "none",
+                "issue_type": "pull-request",
+                "repository": "yuyang0/rrqlite"
+              }
+            ]
+
+      - name: Edit comment with error message
+        if: steps.scd.outputs.error-message
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          body: |
+            > ${{ steps.scd.outputs.error-message }}
+
+      # # Advanced JSON configuration from file
+      # # (These commands do not do anything and are just a reference example)
+      # - name: Slash Command Dispatch (JSON file)
+      #   uses: ./
+      #   with:
+      #     token: ${{ secrets.REPO_ACCESS_TOKEN }}
+      #     reactions: false
+      #     config-from-file: .github/slash-command-dispatch.json

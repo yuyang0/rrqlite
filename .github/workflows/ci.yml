@@ -1,14 +1,14 @@
-on: [push, pull_request]
 name: ci
+on: [push, pull_request]
 jobs:
   ut:
     name: unittest
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        store_defensive:
-          - "on"
-          - "off"
+    # strategy:
+    #   matrix:
+    #     store_defensive:
+    #       - "on"
+    #       - "off"
 
     steps:
       - name: Setup | Checkout
@@ -18,6 +18,8 @@ jobs:
       - name: Setup | Toolchain
         uses: actions-rs/toolchain@v1
         with:
+          toolchain: nightly
+          override: true
           components: rustfmt, clippy
 
       # - A store with defensive checks returns error when unexpected accesses are sent to RaftStore.
@@ -31,7 +33,7 @@ jobs:
           RUST_TEST_THREADS: 2
           RUST_LOG: debug
           RUST_BACKTRACE: full
-          RAFT_STORE_DEFENSIVE: ${{ matrix.store_defensive }}
+          # RAFT_STORE_DEFENSIVE: ${{ matrix.store_defensive }}
 
 
       - name: Build | Release Mode
@@ -104,6 +106,8 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1.0.6
         with:
+          toolchain: nightly
+          override: true
           components: rustfmt, clippy
 
       - name: Format
@@ -113,8 +117,8 @@ jobs:
           args: --all -- --check
 
 
-      - name: Clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets -- -D warnings -A clippy::bool-assert-comparison
+      # - name: Clippy
+      #   uses: actions-rs/clippy-check@v1
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     args: --all-targets -- -D warnings -A clippy::bool-assert-comparison
