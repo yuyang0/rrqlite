@@ -647,7 +647,7 @@ impl RqliteNode {
             .ok_or(APIError::NotLeader(format!("not found leader")))?;
 
         let metrics = self.raft.metrics().borrow().clone();
-        let leader_node = metrics.membership_config.get_node(leader_node_id);
+        let leader_node = metrics.membership_config.get_node(&leader_node_id);
         let node =
             leader_node.ok_or(APIError::NoLeaderError(format!("leader addr is not found")))?;
         Ok(String::from(&node.addr))
@@ -655,7 +655,7 @@ impl RqliteNode {
 
     pub async fn get_node_addr(&self, node_id: &NodeId) -> StoreResult<String> {
         let metrics = self.raft.metrics().borrow().clone();
-        let leader_node = metrics.membership_config.get_node(node_id.clone());
+        let leader_node = metrics.membership_config.get_node(node_id);
         let node = leader_node.ok_or(APIError::GetNodeAddrError(format!(
             "Node({})'s addr is not found",
             node_id

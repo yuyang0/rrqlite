@@ -1,7 +1,7 @@
 use core_sled::openraft;
 use core_store::errors::StoreResult;
 use core_store::fsm::{SQLFsm, FSM};
-use core_store::types::openraft::{EffectiveMembership, LogId};
+use core_store::types::openraft::{EffectiveMembership, LogId, Membership};
 
 fn test_fsm_helper(fsm: SQLFsm) -> StoreResult<()> {
     let log_id = LogId {
@@ -17,7 +17,7 @@ fn test_fsm_helper(fsm: SQLFsm) -> StoreResult<()> {
     let new_applied = new_applied.unwrap();
     assert!(log_id == new_applied);
 
-    let mem = EffectiveMembership::new(log_id, openraft::Membership::default());
+    let mem = EffectiveMembership::new(log_id, Membership::new(vec![], None));
     fsm.set_membership(&mem)?;
     let new_mem = fsm.get_membership()?;
     assert!(new_mem.is_some());

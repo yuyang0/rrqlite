@@ -15,7 +15,7 @@ test = false
 core-exception = { path = "../exception" }
 core-tracing = { path = "../tracing" }
 
-openraft = { git = "https://github.com/datafuselabs/openraft", rev = "6eeb930746baa7782ef961876eba353f4244f3ad" }
+openraft = { git = "https://github.com/datafuselabs/openraft", rev = "efdc321dad07344360732da277f63150e5cfc4d0" }
 sled = { version = "0.34" }
 
 anyerror = "0.1.6"

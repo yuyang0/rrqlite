@@ -267,7 +267,6 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3fcdccf28e08d90b98adc330fde2c08bdc5bca625b3611fd755e03c90bfe9ca"
 dependencies = [
- "anyhow",
  "serde",
 ]
 
@@ -1561,7 +1560,7 @@ checksum = "da32515d9f6e6e489d7bc9d84c71b060db7247dc035bbe44eac88cf87486d8d5"
 [[package]]
 name = "openraft"
 version = "0.6.4"
-source = "git+https://github.com/datafuselabs/openraft?rev=6eeb930746baa7782ef961876eba353f4244f3ad#6eeb930746baa7782ef961876eba353f4244f3ad"
+source = "git+https://github.com/datafuselabs/openraft?rev=efdc321dad07344360732da277f63150e5cfc4d0#efdc321dad07344360732da277f63150e5cfc4d0"
 dependencies = [
  "anyerror",
  "async-trait",

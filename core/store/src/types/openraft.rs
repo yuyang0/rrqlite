@@ -11,6 +11,7 @@ pub type LogId = openraft::LogId<NodeId>;
 pub type Entry = openraft::raft::Entry<RqliteTypeConfig>;
 pub type EntryPayload = openraft::raft::EntryPayload<RqliteTypeConfig>;
 pub type EffectiveMembership = openraft::EffectiveMembership<RqliteTypeConfig>;
+pub type Membership = openraft::Membership<RqliteTypeConfig>;
 
 pub type LogState = openraft::storage::LogState<RqliteTypeConfig>;
 pub type Snapshot<S> = openraft::storage::Snapshot<RqliteTypeConfig, S>;
