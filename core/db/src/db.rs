@@ -194,6 +194,7 @@ impl DB {
         }
 
         for proto_stmt in req.statements.iter() {
+            let stmt_start = std::time::Instant::now();
             let mut single_res = command::SingleExecuteResult::default();
 
             let params = convert_params(&proto_stmt.parameters);
@@ -201,8 +202,15 @@ impl DB {
                 .iter()
                 .map(|(name, v)| (*name, v as &dyn ToSql))
                 .collect();
-            let update_rows = conn.execute(&proto_stmt.sql, &params[..])?;
-            single_res.rows_affected += update_rows as i64;
+            let update_rows = match conn.execute(&proto_stmt.sql, &params[..]) {
+                Ok(v) => v,
+                Err(e) => {
+                    single_res.error = e.to_string();
+                    0
+                }
+            };
+            single_res.rows_affected = update_rows as i64;
+            single_res.time = stmt_start.elapsed().as_secs_f64();
             final_res.results.push(single_res);
         }
         Ok(final_res)
@@ -244,6 +252,8 @@ impl DB {
         }
 
         for proto_stmt in req.statements.iter() {
+            let stmt_start = std::time::Instant::now();
+
             let mut rows = command::QueryRows::default();
 
             let params = convert_params(&proto_stmt.parameters);
@@ -309,6 +319,7 @@ impl DB {
                 },
                 Err(err) => rows.error = err.to_string(),
             }
+            rows.time = stmt_start.elapsed().as_secs_f64();
             all_rows.push(rows);
         }
         // if req.transaction {
