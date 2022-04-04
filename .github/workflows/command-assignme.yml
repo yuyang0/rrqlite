@@ -3,7 +3,7 @@ on:
   repository_dispatch:
     types: [assignme-command]
 jobs:
-  example:
+  assignme:
     runs-on: ubuntu-latest
     steps:
       # - name: Add reaction

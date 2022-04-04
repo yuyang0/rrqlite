@@ -3,7 +3,7 @@ on:
   repository_dispatch:
     types: [help-command]
 jobs:
-  example:
+  help:
     runs-on: ubuntu-latest
     steps:
       - uses: peter-evans/create-or-update-comment@v1

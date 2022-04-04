@@ -1,0 +1,22 @@
+name: approve-command
+on:
+  repository_dispatch:
+    types: [approve-pr-command]
+jobs:
+  add_or_remove_approved_label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: add approved label
+        uses: actions-ecosystem/action-add-labels@v1
+        if: ${{ !contains(github.event.client_payload.slash_command.args.all, 'cancel') }}
+        with:
+          github_token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          number: ${{ github.event.client_payload.github.payload.pull_request.number }}
+          labels: approved
+      - name: remove approved label
+        uses: actions-ecosystem/action-remove-labels@v1
+        if: ${{ contains(github.event.client_payload.slash_command.args.all, 'cancel') }}
+        with:
+          github_token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          number: ${{ github.event.client_payload.github.payload.pull_request.number }}
+          labels: approved

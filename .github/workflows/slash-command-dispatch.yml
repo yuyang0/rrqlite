@@ -41,10 +41,11 @@ jobs:
                 "repository": "yuyang0/rrqlite"
               },
               {
-                "command": "rebase",
+                "command": "approve",
                 "permission": "admin",
                 "repository": "yuyang0/rrqlite",
-                "issue_type": "pull-request"
+                "issue_type": "pull-request",
+                "event_type_suffix": "-pr-command"
               },
               {
                 "command": "help",
@@ -58,55 +59,11 @@ jobs:
                 "issue_type": "pull-request",
                 "repository": "yuyang0/rrqlite",
                 "event_type_suffix": "-pr-command"
-              },
-              {
-                "command": "example",
-                "permission": "none",
-                "issue_type": "issue",
-                "repository": "yuyang0/rrqlite"
-              },
-              {
-                "command": "hello-world",
-                "permission": "none",
-                "issue_type": "issue",
-                "repository": "yuyang0/rrqlite"
-              },
-              {
-                "command": "hello-world",
-                "permission": "none",
-                "issue_type": "pull-request",
-                "repository": "yuyang0/rrqlite",
-                "event_type_suffix": "-pr-command"
-              },
-              {
-                "command": "hello-workflow",
-                "permission": "none",
-                "issue_type": "issue",
-                "repository": "yuyang0/rrqlite",
-                "static_args": [
-                  "repository=${{ github.repository }}",
-                  "comment-id=${{ github.event.comment.id }}",
-                  "issue-number=${{ github.event.issue.number }}",
-                  "actor=${{ github.actor }}"
-                ],
-                "dispatch_type": "workflow"
               },
               {
                 "command": "ping",
                 "permission": "none",
                 "issue_type": "issue",
-                "repository": "yuyang0/rrqlite"
-              },
-              {
-                "command": "black",
-                "permission": "none",
-                "issue_type": "pull-request",
-                "repository": "yuyang0/rrqlite"
-              },
-              {
-                "command": "reset-demo",
-                "permission": "none",
-                "issue_type": "pull-request",
                 "repository": "yuyang0/rrqlite"
               }
             ]
