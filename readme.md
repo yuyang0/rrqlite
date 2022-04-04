@@ -6,7 +6,7 @@ A rust implementation of [ rqlite ]( https://github.com/rqlite/rqlite ).
 
 ---
 
-[![CI](https://github.com/yuyang0/rrqlite/actions/workflows/ci.yaml/badge.svg)](https://github.com/yuyang0/rrqlite/actions/workflows/ci.yaml)
+[![CI](https://github.com/yuyang0/rrqlite/actions/workflows/ci.yml/badge.svg)](https://github.com/yuyang0/rrqlite/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE)
 
 This project is still in development.
