@@ -164,7 +164,7 @@ async fn test_cluster() -> anyhow::Result<()> {
     let client3 = client::RqliteClient::new(get_api_addr(3)?);
 
     // Wait for server to start up.
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
     let default_params = URLParams {
         transaction: true,
@@ -192,7 +192,7 @@ async fn test_cluster() -> anyhow::Result<()> {
 
     // --- Wait for a while to let the replication get done.
 
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // --- Read it on every node.
     fn check_table(res: command::QueryResult) {
@@ -248,7 +248,7 @@ async fn test_cluster() -> anyhow::Result<()> {
 
     // --- Wait for a while to let the replication get done.
 
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // --- Read it on every node.
     let query_sql = "
@@ -290,7 +290,7 @@ async fn test_cluster() -> anyhow::Result<()> {
         .await?;
     println!("~~~~ execute result {:?}", res);
 
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // --- Read it on every node.
     let query_sql = "
@@ -331,7 +331,7 @@ async fn test_cluster() -> anyhow::Result<()> {
         .await?;
     println!("~~~~ execute result {:?}", res);
 
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // --- Read it on every node.
     let query_sql = "
