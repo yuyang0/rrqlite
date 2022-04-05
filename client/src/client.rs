@@ -75,9 +75,8 @@ impl RqliteClient {
         stmt: &str,
         params: &URLParams,
     ) -> std::result::Result<QueryResult, reqwest::Error> {
-        let mut url = Url::parse(&format!("http://{}/db/query", self.addr)).unwrap();
-        url.query_pairs_mut().append_pair("q", stmt.trim());
-        let builder = self.inner.get(url);
+        let url = format!("http://{}/db/query", self.addr);
+        let builder = self.inner.get(url).query(&[("q", stmt.trim())]);
         self.query_helper(builder, params).await
     }
 
