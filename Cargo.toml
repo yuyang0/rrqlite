@@ -9,4 +9,5 @@ members = [
     "core/util/containers",
     "core/sled",
     "server",
+    "client",
 ]
