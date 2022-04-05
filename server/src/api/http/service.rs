@@ -109,10 +109,17 @@ async fn handle_db_query_get(
     node: web::Data<Arc<RqliteNode>>,
 ) -> impl Responder {
     let query_str = _req.query_string();
-    let qs = QString::from(query_str);
+
+    tracing::debug!("Query params {}", query_str);
+
+    // TODO remove `replace`
+    // reqwest encode the space char in query string to +,
+    // qstring seems can't handle this problem, so we convert the char manually.
+    let query_str = query_str.replace("+", " ");
+
+    let qs = QString::from(query_str.as_str());
     let stmt = match qs.get("q") {
-        // TODO remove `replace`
-        Some(s) => s.replace("+", " "),
+        Some(s) => s,
         None => return HttpResponse::BadRequest().body("need sql statment"),
     };
     let stmts = vec![command::Statement {
@@ -182,7 +189,7 @@ async fn handle_db_query(
         level: level.into(),
     };
 
-    tracing::debug!("++++++ Query SQL: {:?}", qr);
+    tracing::debug!("QueryRequest: {:?}", qr);
 
     let res = tokio::time::timeout(
         Duration::from_secs(timeout as u64),
