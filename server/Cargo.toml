@@ -32,3 +32,11 @@ actix-rt = "2.6"
 toml = "0.5.8"
 openssl = { version = "0.10" }
 qstring = "0.7"
+
+[dev-dependencies]
+anyerror = "*"
+anyhow = "1.0.55"
+tempfile = "3.3"
+
+client = { path = "../client" }
+core-sled = { path = "../core/sled" }

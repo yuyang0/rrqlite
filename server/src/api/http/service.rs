@@ -58,6 +58,8 @@ async fn handle_db_execute(
         Ok(v) => v,
     };
 
+    let start_inst = tokio::time::Instant::now();
+
     let er = match stmts_opt {
         Err(e) => {
             let msg = HashMap::from([("error", format!("{}", e))]);
@@ -79,16 +81,24 @@ async fn handle_db_execute(
         node.execute(er, redirect),
     )
     .await;
-    let es = match res {
+    let mut es = match res {
         Ok(v) => match v {
             Ok(resp) => resp,
-            Err(e) => return HttpResponse::BadRequest().body(format!("Failed to execute: {}", e)),
+            Err(e) => {
+                let mut es = command::ExecuteResult::default();
+                es.error = format!("Failed to execute: {}", e);
+                es
+            }
         },
-        Err(_e) => {
-            return HttpResponse::RequestTimeout()
-                .json(HashMap::from([("error", "execute timeout")]))
+        Err(e) => {
+            let mut es = command::ExecuteResult::default();
+            es.error = format!("Failed to execute: {}", e);
+            es
         }
     };
+    if timings {
+        es.time = start_inst.elapsed().as_secs_f64();
+    }
     HttpResponse::Ok().json(es)
 }
 
@@ -101,7 +111,8 @@ async fn handle_db_query_get(
     let query_str = _req.query_string();
     let qs = QString::from(query_str);
     let stmt = match qs.get("q") {
-        Some(s) => s,
+        // TODO remove `replace`
+        Some(s) => s.replace("+", " "),
         None => return HttpResponse::BadRequest().body("need sql statment"),
     };
     let stmts = vec![command::Statement {
@@ -144,14 +155,17 @@ async fn handle_db_query(
         Err(_) => return HttpResponse::BadRequest().body("invalid timeout argument"),
         Ok(v) => v,
     };
-    let freshness = match qs_get_i64(&qs, "freshness", 50) {
+    let freshness = match qs_get_i64(&qs, "freshness", 0) {
         Err(_) => return HttpResponse::BadRequest().body("invalid freshness argument"),
         Ok(v) => v,
     };
+
+    let start_inst = std::time::Instant::now();
+
     let level = match qs.get("level") {
         Some(sv) => match sv.to_lowercase().as_str() {
             "none" => command::query_request::Level::QueryRequestLevelNone,
-            "srong" => command::query_request::Level::QueryRequestLevelStrong,
+            "strong" => command::query_request::Level::QueryRequestLevelStrong,
             "weak" => command::query_request::Level::QueryRequestLevelWeak,
             _ => return HttpResponse::BadRequest().body("invalid level argument"),
         },
@@ -168,26 +182,35 @@ async fn handle_db_query(
         level: level.into(),
     };
 
+    tracing::debug!("++++++ Query SQL: {:?}", qr);
+
     let res = tokio::time::timeout(
         Duration::from_secs(timeout as u64),
         node.query(qr, redirect),
     )
     .await;
-    match res {
+    let mut qs = match res {
         Ok(v) => {
             let qs = match v {
                 Ok(resp) => resp,
                 Err(e) => {
-                    let err_msg = HashMap::from([("error", format!("Failed to execute: {}", e))]);
-                    return HttpResponse::BadRequest().json(err_msg);
+                    let mut qs = command::QueryResult::default();
+                    qs.error = format!("Failed to query: {}", e);
+                    qs
                 }
             };
-            HttpResponse::Ok().json(qs)
+            qs
         }
-        Err(_) => {
-            HttpResponse::RequestTimeout().json(HashMap::from([("error", "execute timeout")]))
+        Err(e) => {
+            let mut qs = command::QueryResult::default();
+            qs.error = format!("Timeout: {}", e);
+            qs
         }
+    };
+    if timings {
+        qs.time = start_inst.elapsed().as_secs_f64();
     }
+    HttpResponse::Ok().json(qs)
 }
 
 #[get("/db/backup")]

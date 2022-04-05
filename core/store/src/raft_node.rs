@@ -575,7 +575,7 @@ impl RqliteNode {
                 // .map_err(|e| APIError::Query(format!("{}", e)))?
 
                 if qr.freshness > 0 && elapsed.as_nanos() > (qr.freshness as u128) {
-                    return Err(APIError::StaleRead(String::from("")).into());
+                    return Err(APIError::StaleRead(String::from("stale read")).into());
                 }
 
                 // TODO after remove rwlock in FSM, here we need to acquire read lock when

@@ -17,10 +17,7 @@ async fn main() -> Result<()> {
     // HTTP API service.
     {
         let mut srv = http::Server::new(&_conf, node.clone())?;
-        tracing::info!(
-            "Starting HTTP API server at {}",
-            _conf.http_config.http_addr
-        );
+        tracing::info!("Starting HTTP API server at {}", _conf.http.http_addr);
         srv.start().await.expect("Failed to start http server");
         stop_handler.push(Box::new(srv));
     }
@@ -28,7 +25,7 @@ async fn main() -> Result<()> {
     node.join_cluster(&_conf.store.raft).await?;
 
     stop_handler.wait_to_terminate(stop_tx).await;
-    tracing::info!("Databend-meta is done shutting down");
+    tracing::info!("Rqlited is done shutting down");
 
     Ok(())
 }

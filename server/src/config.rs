@@ -89,7 +89,7 @@ pub struct Config {
 
     // DisoMode sets the discovery mode. May not be set.
     #[clap(long = "disco-mode", env = "RQLITED_DISCO_MODE", default_value = "")]
-    disco_mode: String,
+    pub disco_mode: String,
 
     // DiscoKey sets the discovery prefix key.
     #[clap(
@@ -97,7 +97,7 @@ pub struct Config {
         env = "RQLITED_DISCO_KEY",
         default_value = "sqlite"
     )]
-    disco_key: String,
+    pub disco_key: String,
 
     // DiscoConfig sets the path to any discovery configuration file. May not be set.
     #[clap(
@@ -105,15 +105,15 @@ pub struct Config {
         env = "RQLITED_DISCO_CONFIG",
         default_value = ""
     )]
-    disco_config: String,
+    pub disco_config: String,
 
     // Expvar enables go/expvar information. Defaults to true.
     #[clap(long = "expvar", env = "RQLITED_EXPVAR")]
-    expvar: bool,
+    pub expvar: bool,
 
     // PprofEnabled enables Go PProf information. Defaults to true.
     #[clap(long = "pprof-enabled", env = "RQLITED_PPROF_ENABLED")]
-    pprof_enabled: bool,
+    pub pprof_enabled: bool,
 
     // // FKConstraints enables SQLite foreign key constraints.
     // FKConstraints bool
@@ -130,7 +130,7 @@ pub struct Config {
     // // MemProfile enables memory profiling.
     // MemProfile string
     #[clap(flatten)]
-    pub http_config: HttpConfig,
+    pub http: HttpConfig,
 
     #[clap(flatten)]
     pub store: StoreConfig,

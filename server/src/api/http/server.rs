@@ -47,17 +47,17 @@ impl Server {
 
         let cfg = _conf.clone();
         let bind_and_run = || -> Result<ActixServer> {
-            if cfg.http_config.x509_cert.is_empty() {
-                srv = srv.bind(&cfg.http_config.http_addr)?;
+            if cfg.http.x509_cert.is_empty() {
+                srv = srv.bind(&cfg.http.http_addr)?;
             } else {
                 let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
                 builder
-                    .set_private_key_file(&cfg.http_config.x509_key, SslFiletype::PEM)
+                    .set_private_key_file(&cfg.http.x509_key, SslFiletype::PEM)
                     .unwrap();
                 builder
-                    .set_certificate_chain_file(&cfg.http_config.x509_cert)
+                    .set_certificate_chain_file(&cfg.http.x509_cert)
                     .unwrap();
-                srv = srv.bind_openssl(&cfg.http_config.http_addr, builder)?;
+                srv = srv.bind_openssl(&cfg.http.http_addr, builder)?;
             }
             let srv = srv.run();
             Ok(srv)
