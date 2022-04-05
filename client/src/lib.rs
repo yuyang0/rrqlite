@@ -1,5 +1,5 @@
 mod client;
-pub use client::{RqliteClient, URLParams};
+pub use crate::client::{RqliteClient, URLParams};
 
 #[cfg(test)]
 mod tests {
