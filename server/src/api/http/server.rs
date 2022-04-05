@@ -12,7 +12,6 @@ use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
 use tracing_actix_web::TracingLogger;
 
-// use serde::{Deserialize, Serialize};
 use super::service;
 use crate::config::Config;
 
@@ -20,14 +19,23 @@ pub struct Server {
     name: String,
     cfg: Config,
     node: Arc<RqliteNode>,
-    srv: Option<ActixServer>,
-    srv_handle: ServerHandle,
+    srv_handle: Option<ServerHandle>,
     join_handle: Option<JoinHandle<std::io::Result<()>>>,
 }
 
 impl Server {
     pub fn new(_conf: &Config, app_node: Arc<RqliteNode>) -> Result<Server> {
-        let node = app_node.clone();
+        Ok(Server {
+            name: String::from("http-api"),
+            cfg: _conf.clone(),
+            node: app_node,
+            srv_handle: None,
+            join_handle: None,
+        })
+    }
+
+    fn create_actix_server(&self) -> Result<ActixServer> {
+        let node = self.node.clone();
         let mut srv = HttpServer::new(move || {
             App::new()
                 .wrap(TracingLogger::default())
@@ -45,7 +53,7 @@ impl Server {
                 .service(service::handle_healthz)
         });
 
-        let cfg = _conf.clone();
+        let cfg = self.cfg.clone();
         let bind_and_run = || -> Result<ActixServer> {
             if cfg.http.x509_cert.is_empty() {
                 srv = srv.bind(&cfg.http.http_addr)?;
@@ -63,22 +71,17 @@ impl Server {
             Ok(srv)
         };
         let srv = bind_and_run()?;
-        let handle = srv.handle();
-        Ok(Server {
-            name: String::from("http-api"),
-            cfg: _conf.clone(),
-            node: app_node,
-            srv: Some(srv),
-            srv_handle: handle,
-            join_handle: None,
-        })
+        Ok(srv)
     }
 }
 
 #[async_trait::async_trait]
 impl Stoppable for Server {
     async fn start(&mut self) -> Result<()> {
-        let srv = self.srv.take().unwrap();
+        let srv = self.create_actix_server()?;
+        let handle = srv.handle();
+        self.srv_handle = Some(handle);
+
         let join_handle = tokio::spawn(srv);
         self.join_handle = Some(join_handle);
         Ok(())
@@ -93,7 +96,8 @@ impl Stoppable for Server {
     ///
     /// Calling `stop()` twice should get an error.
     async fn stop(&mut self, mut force: Option<broadcast::Receiver<()>>) -> Result<()> {
-        let join_handle = self.srv_handle.stop(true);
+        let srv_handle = self.srv_handle.take().unwrap();
+        let join_handle = srv_handle.stop(true);
 
         if let Some(mut force) = force {
             let h = Box::pin(join_handle);
