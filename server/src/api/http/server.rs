@@ -50,7 +50,7 @@ impl Server {
                 .service(service::handle_remove)
                 .service(service::handle_status)
                 .service(service::handle_nodes)
-                .service(service::handle_healthz)
+                .service(service::handle_readyz)
         });
 
         let cfg = self.cfg.clone();

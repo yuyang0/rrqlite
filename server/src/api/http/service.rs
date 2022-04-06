@@ -345,7 +345,24 @@ async fn handle_nodes(_req_body: String, node: web::Data<Arc<RqliteNode>>) -> im
     HttpResponse::Ok().json(res)
 }
 
-#[get("/healthz")]
-async fn handle_healthz(_req_body: String) -> impl Responder {
-    HttpResponse::Ok().body("ok")
+#[get("/readyz")]
+async fn handle_readyz(req: HttpRequest, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
+    // extract query arguments
+    let query_str = req.query_string();
+    let qs = QString::from(query_str);
+    let noleader = qs.get("noleader").is_some();
+    // let timeout = match qs_get_i64(&qs, "timeout", 50) {
+    //     Err(_e) => return HttpResponse::BadRequest().body("invalid timeout
+    // argument"),     Ok(v) => v,
+    // };
+    if noleader {
+        return HttpResponse::Ok().body("[+] node ok");
+    }
+    let _ = match node.leader_id().await {
+        Ok(id) => id,
+        Err(_) => {
+            return HttpResponse::ServiceUnavailable().body("[+]node ok\n[+]leader does not exist")
+        }
+    };
+    return HttpResponse::Ok().body("[+]node ok\n[+]leader ok");
 }
