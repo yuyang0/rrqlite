@@ -95,7 +95,7 @@ impl Stoppable for Server {
     /// `force` signal if it does not support force stop.
     ///
     /// Calling `stop()` twice should get an error.
-    async fn stop(&mut self, mut force: Option<broadcast::Receiver<()>>) -> Result<()> {
+    async fn stop(&mut self, force: Option<broadcast::Receiver<()>>) -> Result<()> {
         let srv_handle = self.srv_handle.take().unwrap();
         let join_handle = srv_handle.stop(true);
 
@@ -104,7 +104,7 @@ impl Stoppable for Server {
             let f = Box::pin(force.recv());
 
             match futures::future::select(f, h).await {
-                Either::Left((_x, h)) => {
+                Either::Left((_x, _h)) => {
                     tracing::info!("{}: received force shutdown signal", self.name);
                     let task_handle = self.join_handle.as_ref().unwrap();
                     task_handle.abort();

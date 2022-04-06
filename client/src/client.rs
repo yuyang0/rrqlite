@@ -1,5 +1,5 @@
 use core_command::command::{ExecuteResult, QueryResult};
-use reqwest::{Client, RequestBuilder, Url};
+use reqwest::{Client, RequestBuilder};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

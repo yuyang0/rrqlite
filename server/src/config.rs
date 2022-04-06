@@ -214,56 +214,59 @@ impl Config {
         Ok(())
     }
 
-    // /// Load configs from environment variables.
-    // pub fn load_from_env(cfg: &mut Config) {
-    //     load_field_from_env!(cfg.log_level, String, METASRV_LOG_LEVEL);
-    //     load_field_from_env!(cfg.log_dir, String, METASRV_LOG_DIR);
-    //     load_field_from_env!(cfg.metric_api_address, String,
-    // METASRV_METRIC_API_ADDRESS);     load_field_from_env!(cfg.
-    // admin_api_address, String, ADMIN_API_ADDRESS);     load_field_from_env!
-    // (cfg.admin_tls_server_cert, String, ADMIN_TLS_SERVER_CERT);
-    //     load_field_from_env!(cfg.admin_tls_server_key, String,
-    // ADMIN_TLS_SERVER_KEY);     load_field_from_env!(cfg.grpc_api_address,
-    // String, METASRV_GRPC_API_ADDRESS);     load_field_from_env!(cfg.
-    // grpc_tls_server_cert, String, GRPC_TLS_SERVER_CERT);
-    //     load_field_from_env!(cfg.grpc_tls_server_key, String,
-    // GRPC_TLS_SERVER_KEY);     load_field_from_env!(
-    //         cfg.raft_config.raft_listen_host,
-    //         String,
-    //         raft_config::KVSRV_LISTEN_HOST
-    //     );
-    //     load_field_from_env!(
-    //         cfg.raft_config.raft_advertise_host,
-    //         String,
-    //         raft_config::KVSRV_ADVERTISE_HOST
-    //     );
-    //     load_field_from_env!(
-    //         cfg.raft_config.raft_api_port,
-    //         u32,
-    //         raft_config::KVSRV_API_PORT
-    //     );
-    //     load_field_from_env!(
-    //         cfg.raft_config.raft_dir,
-    //         String,
-    //         raft_config::KVSRV_RAFT_DIR
-    //     );
-    //     load_field_from_env!(cfg.raft_config.no_sync, bool,
-    // raft_config::KVSRV_NO_SYNC);     load_field_from_env!(
-    //         cfg.raft_config.snapshot_logs_since_last,
-    //         u64,
-    //         raft_config::KVSRV_SNAPSHOT_LOGS_SINCE_LAST
-    //     );
-    //     load_field_from_env!(
-    //         cfg.raft_config.heartbeat_interval,
-    //         u64,
-    //         raft_config::KVSRV_HEARTBEAT_INTERVAL
-    //     );
-    //     load_field_from_env!(
-    //         cfg.raft_config.install_snapshot_timeout,
-    //         u64,
-    //         raft_config::KVSRV_INSTALL_SNAPSHOT_TIMEOUT
-    //     );
-    //     load_field_from_env!(cfg.raft_config.single, bool,
-    // raft_config::KVSRV_SINGLE);     load_field_from_env!(cfg.raft_config.id,
-    // u64, raft_config::KVSRV_ID); }
+    /// Load configs from environment variables.
+    pub fn load_from_env(cfg: &mut Config) {
+        load_field_from_env!(cfg.log_level, String, "RQLITED_LOG_LEVEL");
+        load_field_from_env!(cfg.log_dir, String, "RQLITED_LOG_DIR");
+        //     load_field_from_env!(cfg.metric_api_address, String,
+        // METASRV_METRIC_API_ADDRESS);     load_field_from_env!(cfg.
+        // admin_api_address, String, ADMIN_API_ADDRESS);
+        // load_field_from_env! (cfg.admin_tls_server_cert, String,
+        // ADMIN_TLS_SERVER_CERT);     load_field_from_env!(cfg.
+        // admin_tls_server_key, String, ADMIN_TLS_SERVER_KEY);
+        // load_field_from_env!(cfg.grpc_api_address,
+        // String, METASRV_GRPC_API_ADDRESS);     load_field_from_env!(cfg.
+        // grpc_tls_server_cert, String, GRPC_TLS_SERVER_CERT);
+        //     load_field_from_env!(cfg.grpc_tls_server_key, String,
+        // GRPC_TLS_SERVER_KEY);     load_field_from_env!(
+        //         cfg.raft_config.raft_listen_host,
+        //         String,
+        //         raft_config::KVSRV_LISTEN_HOST
+        //     );
+        //     load_field_from_env!(
+        //         cfg.raft_config.raft_advertise_host,
+        //         String,
+        //         raft_config::KVSRV_ADVERTISE_HOST
+        //     );
+        //     load_field_from_env!(
+        //         cfg.raft_config.raft_api_port,
+        //         u32,
+        //         raft_config::KVSRV_API_PORT
+        //     );
+        //     load_field_from_env!(
+        //         cfg.raft_config.raft_dir,
+        //         String,
+        //         raft_config::KVSRV_RAFT_DIR
+        //     );
+        //     load_field_from_env!(cfg.raft_config.no_sync, bool,
+        // raft_config::KVSRV_NO_SYNC);     load_field_from_env!(
+        //         cfg.raft_config.snapshot_logs_since_last,
+        //         u64,
+        //         raft_config::KVSRV_SNAPSHOT_LOGS_SINCE_LAST
+        //     );
+        //     load_field_from_env!(
+        //         cfg.raft_config.heartbeat_interval,
+        //         u64,
+        //         raft_config::KVSRV_HEARTBEAT_INTERVAL
+        //     );
+        //     load_field_from_env!(
+        //         cfg.raft_config.install_snapshot_timeout,
+        //         u64,
+        //         raft_config::KVSRV_INSTALL_SNAPSHOT_TIMEOUT
+        //     );
+        //     load_field_from_env!(cfg.raft_config.single, bool,
+        // raft_config::KVSRV_SINGLE);
+        // load_field_from_env!(cfg.raft_config.id, u64, raft_config::
+        // KVSRV_ID);
+    }
 }

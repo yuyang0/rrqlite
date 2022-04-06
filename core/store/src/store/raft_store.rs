@@ -29,7 +29,7 @@ pub struct SledRaftStore {
     /// cache for fast access.
     pub id: NodeId,
 
-    config: RaftConfig,
+    _config: RaftConfig,
 
     /// If the instance is opened from an existent state(e.g. load from disk) or
     /// created.
@@ -101,7 +101,7 @@ impl SledRaftStore {
 
         Ok(Self {
             id: raft_state.id,
-            config: config.clone(),
+            _config: config.clone(),
             is_opened: is_open,
             _db: db,
             raft_state,

@@ -305,8 +305,21 @@ async fn handle_join(req_body: String, node: web::Data<Arc<RqliteNode>>) -> impl
 }
 
 #[post("/notify")]
-async fn handle_notify(req_body: String, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
-    HttpResponse::Ok().body(req_body)
+async fn handle_notify(req_body: String, _node: web::Data<Arc<RqliteNode>>) -> impl Responder {
+    let params = match serde_json::from_str::<HashMap<String, String>>(&req_body) {
+        Ok(v) => v,
+        Err(_) => return HttpResponse::BadRequest().body("invalid json"),
+    };
+    let _remote_id = match params.get("id") {
+        Some(v) => v,
+        None => return HttpResponse::BadRequest().body("Need id"),
+    };
+    let _remote_addr = match params.get("addr") {
+        Some(v) => v,
+        None => return HttpResponse::BadRequest().body("Need addr"),
+    };
+    // TODO implement this
+    HttpResponse::NotImplemented().body("Not implemented")
 }
 
 #[delete("/remove")]
@@ -333,12 +346,9 @@ async fn handle_remove(req_body: String, node: web::Data<Arc<RqliteNode>>) -> im
 }
 
 #[get("/status")]
-async fn handle_status(
-    _req: HttpRequest,
-    req_body: String,
-    node: web::Data<Arc<RqliteNode>>,
-) -> impl Responder {
-    HttpResponse::Ok().body(req_body)
+async fn handle_status(_req: HttpRequest, _node: web::Data<Arc<RqliteNode>>) -> impl Responder {
+    // TODO implement this
+    HttpResponse::NotImplemented().body("Not implemented")
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -374,10 +384,6 @@ async fn handle_readyz(req: HttpRequest, node: web::Data<Arc<RqliteNode>>) -> im
     let query_str = req.query_string();
     let qs = QString::from(query_str);
     let noleader = qs.get("noleader").is_some();
-    // let timeout = match qs_get_i64(&qs, "timeout", 50) {
-    //     Err(_e) => return HttpResponse::BadRequest().body("invalid timeout
-    // argument"),     Ok(v) => v,
-    // };
     if noleader {
         return HttpResponse::Ok().body("[+] node ok");
     }
