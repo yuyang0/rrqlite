@@ -326,7 +326,7 @@ async fn handle_status(
     HttpResponse::Ok().body(req_body)
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 struct NodeInfo {
     api_addr: String,
     addr: String,
@@ -340,8 +340,16 @@ struct NodeInfo {
 // This attempts to contact all the nodes in the cluster, so may take
 // some time to return.
 #[get("/nodes")]
-async fn handle_nodes(_req_body: String, node: web::Data<Arc<RqliteNode>>) -> impl Responder {
-    let res = HashMap::from([("key1", NodeInfo::default())]);
+async fn handle_nodes(node: web::Data<Arc<RqliteNode>>) -> impl Responder {
+    let res = match node.get_nodes().await {
+        Ok(v) => v,
+        Err(e) => return HttpResponse::InternalServerError().body(format!("{}", e)),
+    };
+    // TODO convert res to NodeInfo list
+    // let nodes = vec![];
+    // for n in res.iter() {
+
+    // }
     HttpResponse::Ok().json(res)
 }
 

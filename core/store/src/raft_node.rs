@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -670,8 +670,20 @@ impl RqliteNode {
     // // stats returns stats on the Store.
     // pub async stats() (map[string]interface{}, error)
 
-    // // nodes returns the slice of store.Servers in the cluster
-    // pub async nodes() ([]*store.Server, error)
+    // nodes returns the slice of store.Servers in the cluster
+    pub async fn get_nodes(&self) -> StoreResult<Vec<HashMap<&str, String>>> {
+        let metrics = self.raft.metrics().borrow().clone();
+        let nodes = metrics.membership_config.get_nodes();
+        let mut res = vec![];
+        for (node_id, n) in nodes.iter() {
+            let mut ele = HashMap::from([("id", node_id.to_string())]);
+            if let Some(n) = n {
+                ele.insert("addr", String::from(&n.addr));
+            }
+            res.push(ele);
+        }
+        Ok(res)
+    }
 
     // backup wites backup of the node state to dst
     pub async fn backup(&self, leader: bool, f: BackupFormat) -> StoreResult<Vec<u8>> {
