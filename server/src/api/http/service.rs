@@ -251,21 +251,36 @@ async fn handle_db_load(
     req_body: String,
     node: web::Data<Arc<RqliteNode>>,
 ) -> impl Responder {
-    let query_str = _req.query_string(); // "name=ferret"
+    let query_str = _req.query_string();
     let qs = QString::from(query_str);
     let timings = qs.get("timings").is_some();
     let er = command::ExecuteRequest {
         request: Some(command::Request {
+            transaction: false,
             statements: vec![command::Statement {
                 sql: req_body,
                 ..Default::default()
             }],
-            ..Default::default()
         }),
         timings: timings,
         ..Default::default()
     };
-    HttpResponse::Ok().body("haha")
+
+    let start_inst = tokio::time::Instant::now();
+
+    let res = node.execute(er, true).await;
+    let mut es = match res {
+        Ok(resp) => resp,
+        Err(e) => {
+            let mut es = command::ExecuteResult::default();
+            es.error = format!("Failed to execute: {}", e);
+            es
+        }
+    };
+    if timings {
+        es.time = start_inst.elapsed().as_secs_f64();
+    }
+    HttpResponse::Ok().json(es)
 }
 
 // handleJoin handles cluster-join requests from other nodes.
